@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Indonesia Mangrove Regulation Network</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg2: #f8f9fc;
+    --bg3: #f0f3f8;
+    --surface: rgba(0,0,0,0.04);
+    --border: rgba(0,0,0,0.09);
+    --text: #1a2740;
+    --muted: #6b7f99;
+    --accent: #0891b2;
+    --accent2: #0369a1;
+
+    --c-climate:  #00c98b;
+    --c-conservation: #4fc3f7;
+    --c-governance: #a78bfa;
+    --c-planning: #f59e0b;
+    --c-finance: #fb923c;
+    --c-social: #f472b6;
+    --c-other: #94a3b8;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  header {
+    background: linear-gradient(135deg, #f0f6ff 0%, #e8f4fb 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  .header-left { display:flex; align-items:center; gap:14px; }
+  .mangrove-icon {
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg, #00c98b, #0891b2);
+    border-radius: 10px;
+    display: flex; align-items:center; justify-content:center;
+    font-size: 22px;
+    box-shadow: 0 4px 12px rgba(0,201,139,0.3);
+  }
+  .header-title h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a2740;
+    letter-spacing: 0.3px;
+  }
+  .header-title p {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .header-stats {
+    display: flex; gap: 20px;
+  }
+  .stat-pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex; align-items:center; gap:6px;
+  }
+  .stat-pill strong { color: var(--accent); font-size: 14px; }
+
+  .header-right { display:flex; gap:8px; }
+  .btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+  .btn:hover { background: rgba(255,255,255,0.1); border-color: var(--accent); color: var(--accent); }
+  .btn.active { background: rgba(0,212,184,0.15); border-color: var(--accent); color: var(--accent); }
+
+  /* MAIN LAYOUT */
+  .main { display:flex; flex:1; overflow:hidden; position: relative; }
+
+  /* LEFT SIDEBAR */
+  .sidebar {
+    width: 280px;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .sidebar-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-section h3 {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+
+  /* SEARCH */
+  .search-wrap { position:relative; }
+  .search-wrap input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 14px 9px 36px;
+    color: var(--text);
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-wrap input::placeholder { color: var(--muted); }
+  .search-icon {
+    position:absolute; left:12px; top:50%; transform:translateY(-50%);
+    color: var(--muted); font-size:14px; pointer-events:none;
+  }
+
+  /* FILTER CHIPS */
+  .focus-filters { display:flex; flex-wrap:wrap; gap:6px; }
+  .filter-chip {
+    display: flex; align-items: center; gap:6px;
+    padding: 5px 11px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .filter-chip .dot {
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink:0;
+  }
+  .filter-chip.active { opacity:1; }
+  .filter-chip.inactive { opacity:0.4; }
+
+  /* REGULATION TYPE FILTERS */
+  .type-filters { display:flex; flex-direction:column; gap:4px; }
+  .type-item {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 7px 10px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 12px;
+    border: 1px solid transparent;
+  }
+  .type-item:hover { background: var(--surface); }
+  .type-item.active { background: rgba(0,212,184,0.08); border-color: rgba(0,212,184,0.2); }
+  .type-item .type-left { display:flex; align-items:center; gap:8px; }
+  .type-shape { width:14px; height:14px; flex-shrink:0; }
+  .type-count {
+    font-size:10px; background: var(--surface);
+    padding: 2px 7px; border-radius: 10px; color: var(--muted); font-weight:600;
+  }
+
+  /* NODE LIST */
+  .node-list-wrap { flex:1; overflow-y:auto; padding: 0 12px 12px; }
+  .node-list-wrap::-webkit-scrollbar { width:4px; }
+  .node-list-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius:2px; }
+
+  .node-card {
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--surface);
+  }
+  .node-card:hover { border-color: var(--accent); background: rgba(0,212,184,0.05); }
+  .node-card.highlighted { border-color: var(--accent); background: rgba(0,212,184,0.1); }
+  .node-card-label { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .node-card-meta { font-size: 10px; color: var(--muted); display:flex; gap:8px; flex-wrap:wrap; }
+  .node-focus-badge {
+    font-size:9px; padding: 1px 6px; border-radius:10px; font-weight:600;
+    text-transform:uppercase; letter-spacing:0.5px;
+  }
+
+  /* GRAPH AREA */
+  .graph-area {
+    flex:1;
+    position: relative;
+    overflow: hidden;
+    background: #ffffff;
+  }
+
+  .graph-area svg {
+    width:100%; height:100%;
+  }
+
+  /* TOOLTIP */
+  .tooltip {
+    position: absolute;
+    background: #ffffff;
+    border: 1px solid rgba(8,145,178,0.25);
+    border-radius: 10px;
+    padding: 14px 16px;
+    max-width: 340px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 1000;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  }
+  .tooltip.visible { opacity:1; }
+  .tt-label { font-size:14px; font-weight:700; color: var(--accent); font-family:'Playfair Display',serif; margin-bottom:4px; }
+  .tt-type { font-size:10px; color: var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+  .tt-desc { font-size:11px; color: var(--text); line-height:1.6; margin-bottom:8px; max-height:120px; overflow-y:auto; }
+  .tt-meta { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-bottom:4px; }
+  .tt-meta-item { background: var(--surface); border-radius:6px; padding:6px 8px; }
+  .tt-meta-label { font-size:9px; color: var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px; }
+  .tt-meta-val { font-size:12px; font-weight:600; color: var(--accent2); }
+  .tt-link { margin-top:8px; }
+  .tt-link a { font-size:11px; color: var(--accent); text-decoration:none; }
+  .tt-link a:hover { text-decoration:underline; }
+
+  /* RIGHT PANEL - details */
+  .detail-panel {
+    width: 300px;
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: width 0.3s;
+    position: absolute;
+    right: 260px;
+    top: 0;
+    bottom: 0;
+    z-index: 20;
+    box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+  }
+  .detail-panel.hidden { display: none; }
+
+  .panel-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .panel-header h2 { font-size:13px; font-weight:600; font-family:'Playfair Display',serif; }
+  .close-btn { cursor:pointer; color: var(--muted); font-size:18px; line-height:1; }
+  .close-btn:hover { color: var(--text); }
+
+  .panel-body { flex:1; overflow-y:auto; padding:16px; }
+  .panel-body::-webkit-scrollbar { width:4px; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius:2px; }
+
+  .detail-label {
+    font-family: 'Playfair Display', serif;
+    font-size:20px; font-weight:700;
+    color: var(--accent);
+    margin-bottom: 4px;
+    line-height: 1.2;
+  }
+  .detail-type-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+    background: rgba(0,212,184,0.15);
+    color: var(--accent);
+    border: 1px solid rgba(0,212,184,0.3);
+  }
+  .detail-section { margin-bottom:16px; }
+  .detail-section h4 { font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); font-weight:600; margin-bottom:8px; }
+  .detail-desc { font-size:12px; line-height:1.7; color: var(--text); }
+  .detail-cat {
+    font-size: 11px; background: var(--surface); border: 1px solid var(--border);
+    padding: 5px 10px; border-radius:6px; color: var(--text); display:inline-block;
+  }
+  .metrics-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius:8px; padding:10px; }
+  .metric-card .m-label { font-size:9px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); margin-bottom:3px; }
+  .metric-card .m-val { font-size:16px; font-weight:700; color: var(--accent2); }
+  .connections-list { list-style:none; }
+  .connections-list li {
+    padding: 7px 10px; border-radius:6px; margin-bottom:4px;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 11px; cursor:pointer; transition:all 0.15s;
+    display:flex; align-items:center; gap:8px;
+  }
+  .connections-list li:hover { border-color:var(--accent); color: var(--accent); }
+  .conn-arrow { color: var(--muted); font-size:10px; }
+  .detail-link { display:block; margin-top:8px; }
+  .detail-link a {
+    display:flex; align-items:center; gap:6px;
+    background: rgba(0,212,184,0.1); border: 1px solid rgba(0,212,184,0.3);
+    border-radius:8px; padding:9px 12px;
+    color: var(--accent); font-size:12px; text-decoration:none; font-weight:500;
+    transition:all 0.2s;
+  }
+  .detail-link a:hover { background: rgba(0,212,184,0.2); }
+
+  /* LEGEND */
+  .legend {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    z-index: 10;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  }
+  .legend h4 { font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); margin-bottom:8px; font-weight:600; }
+  .legend-items { display:flex; flex-direction:column; gap:5px; }
+  .legend-item { display:flex; align-items:center; gap:8px; font-size:11px; color: var(--text); }
+  .legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .legend-square { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+  .legend-diamond { width:10px; height:10px; transform:rotate(45deg); flex-shrink:0; }
+  .legend-triangle { width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-bottom:10px solid; flex-shrink:0; }
+
+  /* GRAPH CONTROLS */
+  .graph-controls {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display:flex; flex-direction:column; gap:6px;
+    z-index:10;
+  }
+  .ctrl-btn {
+    width:34px; height:34px;
+    background: rgba(255,255,255,0.9);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    border-radius:8px;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 16px;
+    display:flex; align-items:center; justify-content:center;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .ctrl-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* node & edge styles applied via D3 */
+  .node-circle { cursor:pointer; transition: r 0.2s; }
+  .node-label { font-family:'DM Sans',sans-serif; pointer-events:none; user-select:none; }
+  .edge { stroke-opacity:0.35; }
+  .edge.directed { marker-end: url(#arrow); }
+  .edge.highlighted { stroke-opacity:0.9; stroke-width:2.5px !important; }
+  .edge.faded { stroke-opacity:0.05; }
+  .node-group.faded { opacity: 0.15; }
+  .node-group.highlighted { filter: drop-shadow(0 0 8px currentColor); }
+
+  /* SIZE CONTROL */
+  .size-control {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 5px 10px;
+  }
+  .size-label {
+    font-size: 11px; color: var(--muted); font-weight: 500; white-space: nowrap;
+  }
+  .size-options { display: flex; gap: 4px; }
+  .size-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--muted);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .size-btn:hover { background: rgba(8,145,178,0.08); color: var(--accent); }
+  .size-btn.active {
+    background: rgba(8,145,178,0.14);
+    border-color: rgba(8,145,178,0.35);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* EMPTY SEARCH */
+  .no-results { text-align:center; padding:20px; color: var(--muted); font-size:12px; }
+
+  /* RIGHT REGULATIONS PANEL */
+  .reg-panel {
+    width: 260px;
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+    z-index: 5;
+  }
+  .reg-panel-header {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, #f0f6ff 0%, #e8f4fb 100%);
+    flex-shrink: 0;
+  }
+  .reg-panel-header h3 {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .reg-panel-count {
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .reg-panel-count strong {
+    font-size: 22px;
+    color: var(--accent);
+    font-family: 'Playfair Display', serif;
+    line-height: 1;
+  }
+  .reg-search-wrap { position:relative; margin-top: 8px; }
+  .reg-search-wrap input {
+    width: 100%;
+    background: rgba(255,255,255,0.7);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 7px 12px 7px 30px;
+    color: var(--text);
+    font-size: 11px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .reg-search-wrap input:focus { border-color: var(--accent); }
+  .reg-search-wrap input::placeholder { color: var(--muted); }
+  .reg-search-icon {
+    position:absolute; left:10px; top:50%; transform:translateY(-50%);
+    color: var(--muted); font-size:12px; pointer-events:none;
+  }
+
+  .reg-list-wrap {
+    flex:1; overflow-y:auto; padding: 8px;
+  }
+  .reg-list-wrap::-webkit-scrollbar { width:3px; }
+  .reg-list-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius:2px; }
+
+  .reg-item {
+    padding: 9px 10px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    margin-bottom: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: rgba(255,255,255,0.6);
+    border-color: var(--border);
+  }
+  .reg-item:hover {
+    border-color: var(--accent);
+    background: rgba(8,145,178,0.05);
+    transform: translateX(-2px);
+  }
+  .reg-item.active {
+    border-color: var(--accent);
+    background: rgba(8,145,178,0.1);
+    box-shadow: 0 2px 8px rgba(8,145,178,0.15);
+  }
+  .reg-item-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 5px;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .reg-item-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    line-height: 1.4;
+  }
+  .reg-item-focus {
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .reg-group-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    font-weight: 700;
+    padding: 6px 4px 3px;
+    margin-top: 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-left">
+    <div class="mangrove-icon">🌿</div>
+    <div class="header-title">
+      <h1>Indonesia Mangrove Regulation Network</h1>
+      <p>Regulatory Interconnection Map · Indonesia</p>
+    </div>
+  </div>
+  <div class="header-stats">
+    <div class="stat-pill"><strong>81</strong> Regulations</div>
+    <div class="stat-pill"><strong>149</strong> Connections</div>
+    <div class="stat-pill"><strong>6</strong> Focus Areas</div>
+  </div>
+  <div class="header-right">
+    <div class="size-control">
+      <span class="size-label">Node size by</span>
+      <div class="size-options" id="sizeOptions">
+        <button class="size-btn active" data-metric="degree" onclick="setSizeMetric('degree')">Degree</button>
+        <button class="size-btn" data-metric="betweenness" onclick="setSizeMetric('betweenness')">Betweenness</button>
+        <button class="size-btn" data-metric="eigenvector" onclick="setSizeMetric('eigenvector')">Eigenvector</button>
+        <button class="size-btn" data-metric="closeness" onclick="setSizeMetric('closeness')">Closeness</button>
+        <button class="size-btn" data-metric="reach" onclick="setSizeMetric('reach')">Reach</button>
+        <button class="size-btn" data-metric="micmac_exp" onclick="setSizeMetric('micmac_exp')">MICMAC Exp</button>
+        <button class="size-btn" data-metric="micmac_inf" onclick="setSizeMetric('micmac_inf')">MICMAC Inf</button>
+      </div>
+    </div>
+    <div style="width:1px;background:var(--border);margin:0 4px;"></div>
+    <button class="btn active" id="btn-force" onclick="setLayout('force')">Force Graph</button>
+    <button class="btn" id="btn-radial" onclick="setLayout('radial')">Radial</button>
+    <button class="btn" onclick="resetView()">⟳ Reset</button>
+  </div>
+</header>
+
+<div class="main">
+  <!-- LEFT SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="Search regulations…" oninput="filterNodes(this.value)">
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3>General Focus</h3>
+      <div class="focus-filters" id="focusFilters"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3>Regulation Type</h3>
+      <div class="type-filters" id="typeFilters"></div>
+    </div>
+
+    <div style="padding:12px 12px 4px; border-bottom:1px solid var(--border);">
+      <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);font-weight:600;">Regulations</span>
+      <span id="nodeCount" style="font-size:10px;color:var(--muted);float:right;"></span>
+    </div>
+    <div class="node-list-wrap" id="nodeList"></div>
+  </div>
+
+  <!-- GRAPH -->
+  <div class="graph-area" id="graphArea">
+    <svg id="mainSvg">
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="8" refX="12" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="rgba(255,255,255,0.3)"/>
+        </marker>
+        <marker id="arrow-highlight" markerWidth="8" markerHeight="8" refX="12" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#00d4b8"/>
+        </marker>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+    </svg>
+    <div class="graph-controls">
+      <button class="ctrl-btn" onclick="zoomIn()" title="Zoom In">+</button>
+      <button class="ctrl-btn" onclick="zoomOut()" title="Zoom Out">−</button>
+      <button class="ctrl-btn" onclick="resetView()" title="Fit">⊡</button>
+    </div>
+    <div class="legend">
+      <h4>General Focus</h4>
+      <div class="legend-items" id="legendItems"></div>
+    </div>
+  </div>
+
+  <!-- DETAIL PANEL -->
+  <div class="detail-panel hidden" id="detailPanel">
+    <div class="panel-header">
+      <h2>Regulation Detail</h2>
+      <span class="close-btn" onclick="closeDetail()">✕</span>
+    </div>
+    <div class="panel-body" id="detailBody"></div>
+  </div>
+
+  <!-- RIGHT REGULATIONS PANEL -->
+  <div class="reg-panel" id="regPanel">
+    <div class="reg-panel-header">
+      <h3>Regulations</h3>
+      <div class="reg-panel-count">
+        <strong id="regCount">81</strong>
+        <span>regulations</span>
+      </div>
+      <div class="reg-search-wrap">
+        <span class="reg-search-icon">🔍</span>
+        <input type="text" id="regSearchInput" placeholder="Filter list…" oninput="filterRegPanel(this.value)">
+      </div>
+    </div>
+    <div class="reg-list-wrap" id="regList"></div>
+  </div>
+</div>
+
+<!-- TOOLTIP -->
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const rawElements = [{"Label": "KMLHK  716-2023", "General Focus": "Climate & Carbon", "Category": "NEK in Environmental Permitting", "Regulation Type": "Ministerial Decree", "Description": "Decree of the Minister of Environment and Forestry No. 716 of 2023 on the Integration of Carbon Economic Value Mechanism in Approval, Partnership and Business Licensing in the Field of Environment and Forestry\n\nThis decree ensures that the economic value of carbon stored and sequestered in ecosystems, such as mangroves, is formally recognized in regulatory and business processes. By embedding carbon valuation into licensing and partnership decisions, it incentivizes the preservation and sustainable management of ecosystems, while also accounting for co-benefits such as biodiversity protection, water regulation, and community livelihoods. This approach links financial and regulatory mechanisms directly to the conservation and enhancement of both carbon-related and broader ecosystem services. This decree also focuses on integrating carbon economic value mechanisms into regulatory approvals, partnerships, and licensing to facilitate carbon trading activities and compliance within the environment and forestry sectors.", "Link": "https://www.scribd.com/document/658832750/SK716-Pengintegrasian-Mekanisme-Nilai-Karbon-English-1", "degree": "9", "size": "10", "betweenness": "0.004054010493086123", "closeness": "0.0750420168067227", "eigenvector": "0.02584268394051901", "indegree": "6", "outdegree": "3", "reach": "0.05813953488372093", "micmac_exposure": "0.6631509852851927", "micmac_influence": "0.0115237224260371"}, {"Label": "PMLHK 71-2017", "General Focus": "Climate & Carbon", "Category": "", "Regulation Type": "Ministerial Regulation", "Description": "Regulation of the Minister of Environment and Forestry of the Republic of Indonesia Number P.71/MENLHK/SETJEN/KUM.1/12/2017 on the Implementation of the National Registry System for Climate Change Control\n\nThis establishes the national web-based system to manage data and information on climate change actions and resources, including mangrove carbon activities, ensuring transparency and monitoring for emission reductions", "Link": "https://jdih.maritim.go.id/id/peraturan-menteri-lingkungan-hidup-dan-kehutanan-no-p71menlhksetjenkum1122017-tahun-2017", "degree": "6", "size": "7", "betweenness": "0.0003845427059712773", "closeness": "0.023529411764705882", "eigenvector": "0.0020701631461812558", "indegree": "4", "outdegree": "2", "reach": "0.03488372093023256", "micmac_exposure": "0.06018093011571806", "micmac_influence": "0"}, {"Label": "PMKP 14-2021", "General Focus": "Governance & Policy", "Category": "Standard Non-Food Fishery Products", "Regulation Type": "Ministerial Regulation", "Description": "", "Link": "https://peraturan.go.id/files/bn520-2021.pdf", "degree": "1", "size": "2", "betweenness": "0", "closeness": "0.011764705882352941", "eigenvector": "0", "indegree": "0", "outdegree": "1", "reach": "0.023255813953488372", "micmac_exposure": "0", "micmac_influence": "0"}, {"Label": "PPRES 121-2012", "General Focus": "Conservation & Nature", "Category": "Coastal & Island Rehabilitation", "Regulation Type": "President Regulation", "Description": "Presidential Regulation (PERPRES) No. 121/2012 on the Rehabilitation of Coastal Areas and Small Islands\n\nThis regulation directs government efforts toward the restoration of degraded ecosystems, positioning mangrove rehabilitation as a key strategy to strengthen coastal resilience, reduce disaster risks, and restore ecological functions.", "Link": "https://peraturan.bpk.go.id/Details/41366/perpres-no-121-tahun-2012", "degree": "2", "size": "3", "betweenness": "0.0014005602240896356", "closeness": "0.06764705882352942", "eigenvector": "0", "indegree": "1", "outdegree": "1", "reach": "0.03488372093023256", "micmac_exposure": "0", "micmac_influence": "0.01995856992248625"}, {"Label": "KMHUT 594-2025", "General Focus": "Conservation & Nature", "Category": "Mangroves Map", "Regulation Type": "Ministerial Decree", "Description": "Minister of Forestry Decree No. 594 of 2025 on the national mangrove map 2024\n\nThis regulation updates and defines Indonesia's mangrove coverage based on the latest spatial data. The decree provides detailed information on mangrove distribution, condition, and classifications, which are critical for guiding national mangrove conservation, protection, management, and rehabilitation strategies. It supports evidence-based policymaking and coordinated action by government agencies, regional authorities, and stakeholders involved in mangrove ecosystem management. The decree also highlights the extent of mangroves located inside and outside designated forest areas, enabling targeted interventions aligned with national environmental and climate goals.", "Link": "https://www.bpdas-sjd.id/tdash/pdf/skpmn.pdf", "degree": "10", "size": "11", "betweenness": "0.004591836734693877", "closeness": "0.06764705882352942", "eigenvector": "0.024427925124938816", "indegree": "9", "outdegree": "1", "reach": "0.03488372093023256", "micmac_exposure": "0.08460947561485409", "micmac_influence": "0.01995856992248625"}, {"Label": "PP 23-2021", "General Focus": "Conservation & Nature", "Category": "Forestry Permit System", "Regulation Type": "Government Regulation", "Description": "Government Regulation (PP) Number 23 of 2021 concerning the Implementation of Forestry\n\nThe regulation provides a comprehensive framework for managing forest areas, including mangroves. It governs forest area designation, boundary changes, land tenure resolution, and sustainable forest management. The regulation supports social forestry programs, empowering local communities to manage forests sustainably.", "Link": "https://peraturan.bpk.go.id/Details/161853/pp-no-23-tahun-2021", "degree": "6", "size": "7", "betweenness": "0.00022675736961451243", "closeness": "0.13843137254901963", "eigenvector": "0.0020701631461812558", "indegree": "1", "outdegree": "5", "reach": "0.16279069767441862", "micmac_exposure": "0.06018093011571806", "micmac_influence": "0.07781413399898883"}, {"Label": "PP 26-2020", "General Focus": "Conservation & Nature", "Category": "Forest & Land Rehabilitation", "Regulation Type": "Government Regulation", "Description": "Government Regulation (PP) No. 26 of 2020 on Forest Rehabilitation and Reclamation\n\nIt sets the framework for restoring and enhancing the function and productivity of degraded forests and lands. It prioritizes rehabilitation on critical lands through activities that recover forest ecosystems and reclaim affected areas. The regulation emphasizes transparent, accountable, and participatory rehabilitation involving communities, with clear roles for government authorities. It aims to improve environmental support capacity and sustainable forest management.", "Link": "https://peraturan.bpk.go.id/Details/138323/pp-no-26-tahun-2020", "degree": "6", "size": "7", "betweenness": "0.003961584633853541", "closeness": "0.14019607843137252", "eigenvector": "0.0020701631461812558", "indegree": "1", "outdegree": "5", "reach": "0.12790697674418605", "micmac_exposure": "0.06018093011571806", "micmac_influence": "0.08426874423072486"}, {"Label": "PMLHK 8-2021", "General Focus": "Conservation & Nature", "Category": "Management of Protected and Production Forest Areas", "Regulation Type": "Ministerial Regulation", "Description": "Regulation of the Minister of Environment and Forestry Republic of Indonesia Number 8 Year 2021 concerning Forest Arrangement and Preparation of Forest Management Plans, and Forest Utilization in Protection Forest and Production Forest\n\nThis regulation provides detailed guidelines for planning and managing forest areas, including protection and production forests, which encompass mangrove ecosystems. It mandates the preparation of forest management plans that specify conservation, restoration, and sustainable utilization strategies. \n\nAdditionally, the regulation is essential for credible monitoring, reporting, and certification of forest ecosystem services. Through these provisions, it enables the assessment and certification of forest management practices consistent with national and international standards.", "Link": "https://peraturan.bpk.go.id/Details/235254/permen-lhk-no-8-tahun-2021", "degree": "4", "size": "5", "betweenness": "0.0011604641856742695", "closeness": "0.0823529411764706", "eigenvector": "0.0041403262923625115", "indegree": "2", "outdegree": "2", "reach": "0.05813953488372093", "micmac_exposure": "0.07221711613886167", "micmac_influence": "0.030413214398404144"}, {"Label": "PPRES 51-2016", "General Focus": "Conservation & Nature", "Category": "Coastal Boundaries", "Regulation Type": "President Regulation", "Description": "Presidential Regulation (PERPRES) No. 51/2016 on Coastal Boundaries\n\nPPRES 51-2026 establishes the legal basis for coastal buffer zones, ensuring that mangrove ecosystems, which often occupy critical coastal margins, are preserved from destructive land uses.", "Link": "https://peraturan.bpk.go.id/Details/40463/perpres-no-51-tahun-2016", "degree": "2", "size": "3", "betweenness": "0.0014005602240896356", "closeness": "0.06764705882352942", "eigenvector": "0", "indegree": "1", "outdegree": "1", "reach": "0.03488372093023256", "micmac_exposure": "0", "micmac_influence": "0.01995856992248625"}, {"Label": "PMLHK 9-2021", "General Focus": "Social & Community", "Category": "Social Forestry Legal Basis", "Regulation Type": "Ministerial Regulation", "Description": "Minister of Environment and Forestry Regulation Number 9 of 2021 on Social Forestry Management\n\nThis regulation complements the provisions of Minister of Environment and Forestry Regulation No. 4 of 2023 on Social Forestry Management in Forest Areas with Special Management by providing a broader legal framework for community-based forest management, including mangrove ecosystems.\n\nThis regulation also directly supports mangrove ecosystem management by legally enabling local communities, indigenous peoples, and cooperatives to actively manage mangrove forests in designated social forestry areas. It allows these groups to engage in mangrove conservation, restoration, and sustainable utilization, including activities such as planting mangroves, protecting seedlings, rehabilitating degraded coastal zones, and harvesting non-timber resources without damaging the ecosystem. The regulation specifies the permitting process for social forestry including in mangrove areas, defines community responsibilities for maintaining ecological integrity, and integrates local knowledge and customary practices into mangrove management.", "Link": "https://peraturan.bpk.go.id/Details/235324/permen-lhk-no-9-tahun-2021", "degree": "5", "size": "6", "betweenness": "0.0012600595793873105", "closeness": "0.0911764705882353", "eigenvector": "0.0024841957754175065", "indegree": "2", "outdegree": "3", "reach": "0.06976744186046512", "micmac_exposure": "0.3005484771257415", "micmac_influence": "0.030413214398404144"}, {"Label": "UU 11-2013", "General Focus": "Social & Community", "Category": "FPIC", "Regulation Type": "Law", "Description": "Law No. 11 of 2013\nRatification of the Nagoya Protocol on Access to Genetic Resources and the Fair and Equitable Sharing of Benefits Arising from Their Utilization to the Convention on Biological Diversity", "Link": "https://peraturan.bpk.go.id/Details/38848", "degree": "1", "size": "2", "betweenness": "0", "closeness": "0.011764705882352941", "eigenvector": "0", "indegree": "0", "outdegree": "1", "reach": "0.023255813953488372", "micmac_exposure": "0", "micmac_influence": "0"}, {"Label": "PMKP 28-2021", "General Focus": "Conservation & Nature", "Category": "Coastal Ecosystem Spatial Planning", "Regulation Type": "Ministerial Regulation", "Description": "Regulation of the Minister of Marine Affairs and Fisheries Number 28 of 2021 concerning the Implementation of Marine Spatial Planning\n\nPMKP 28-2021 on the Implementation of Marine Spatial Planning provides the technical framework for how marine spatial plans (Rencana Tata Ruang Laut / RTRL) are put into practice. It ensures that activities in coastal and marine areas — such as fisheries, aquaculture, conservation, and marine infrastructure — follow the zoning designations that have been formally established.\n\nFor mangrove ecosystems, this regulation is highly relevant because mangroves sit at the interface between land and sea, meaning their protection and use must align with both terrestrial spatial plans (ATR/BPN) and marine spatial plans (KKP). Under this regulation:\n\nConservation zones in the marine spatial plan can include mangrove areas, ensuring that they are safeguarded as part of broader coastal ecosystem management.\n\nAny development activities (ports, aquaculture, tourism facilities) in or near mangroves must comply with the zoning rules set in the marine spatial plan.\n\nIt provides legal certainty to integrate mangrove rehabilitation programs into marine spatial management, supporting blue carbon strategies and coastal resilience.", "Link": "https://jdih.kkp.go.id/Homedev/DetailPeraturan/954", "degree": "2", "size": "3", "betweenness": "0.00046685340802987853", "closeness": "0.06764705882352942", "eigenvector": "0.0041403262923625115", "indegree": "1", "outdegree": "1", "reach": "0.03488372093023256", "micmac_exposure": "0.07221711613886167", "micmac_influence": "0.01995856992248625"}, {"Label": "PP 108-2015", "General Focus": "Conservation & Nature", "Category": "Protected Area Governance", "Regulation Type": "Government Regulation", "Description": "Government Regulation (PP) No. 108 of 2015 concerning Amendments to Government Regulation No. 28 of 2011 concerning Management of Nature Reserve Areas and Nature Conservation Areas\n\nThis government regulation strengthens the management of nature reserves and conservation areas by clarifying procedures for protection, utilization, and restoration. In relation to mangrove ecosystem management, this regulation provides the legal framework for conserving mangrove habitats within protected areas, ensuring sustainable use while safeguarding biodiversity and ecosystem services.", "Link": "https://peraturan.bpk.go.id/Details/5687/pp-no-108-tahun-2015", "degree": "2", "size": "3", "betweenness": "0.00028011204481792715", "closeness": "0.07641456582633055", "eigenvector": "5.9435310582579976e-36", "indegree": "2", "outdegree": "1", "reach": "0.05813953488372093", "micmac_exposure": "4.784628397044536e-10", "micmac_influence": "0.011910020574918927"}, {"Label": "PMK 124/PMK.05/2020", "General Focus": "Governance & Policy", "Category": "Environmental Fund Management", "Regulation Type": "Ministerial Regulation", "Description": "", "Link": "https://peraturan.bpk.go.id/Details/145883/pmk-no-124pmk052020", "degree": "5", "size": "6", "betweenness": "0.0009243697478991596", "closeness": "0.05907563025210085", "eigenvector": "0.0020701631461812558", "indegree": "4", "outdegree": "1", "reach": "0.03488372093023256", "micmac_exposure": "0.06018093011571806", "micmac_influence": "0.0115237224260371"}, {"Label": "UU 5-1990", "General Focus": "Conservation & Nature", "Category": "Conservation Law Foundation", "Regulation Type": "Law", "Description": "Law (UU) No. 5 of 1990 concerning the Conservation of Living Natural Resources and their Ecosystems", "Link": "https://peraturan.bpk.go.id/Details/46710/uu-no-5-tahun-1990", "degree": "6", "size": "7", "betweenness": "0.0015406162464985994", "closeness": "0.14372549019607844", "eigenvector": "1.1653982467172544e-37", "indegree": "1", "outdegree": "6", "reach": "0.1511627906976744", "micmac_exposure": "2.6581268872469642e-11", "micmac_influence": "0.07364552857518242"}, {"Label": "UU 45-2009", "General Focus": "Conservation & Nature", "Category": "Fisheries Management", "Regulation Type": "Law", "Description": "Law (UU) No. 45 of 2009 concerning Amendment to Law Number 31 of 2004 concerning Fisheries\n\nThe law acknowledges the interconnection between healthy mangrove ecosystems and sustainable fisheries, supporting integrated coastal management that protects mangrove areas from destructive fishing practices.\n\nBy regulating fishing activities and protecting critical habitats, the law indirectly supports mangrove conservation, restoration, and sustainable production. The ecosystem approach ensures that fisheries management considers the broader coastal ecosystem health needed for both fish populations and carbon sequestration functions, creating synergies between fisheries sustainability and blue carbon objectives in Indonesia's coastal management framework.", "Link": "https://peraturan.bpk.go.id/Details/38790/uu-no-45-tahun-2009", "degree": "2", "size": "3", "betweenness": "0.00014005602240896358", "closeness": "0.2219607843137254", "eigenvector": "0.010350815730906278", "indegree": "1", "outdegree": "2", "reach": "0.12790697674418605", "micmac_exposure": "0.06018093011571806", "micmac_influence": "0.8654360275108185"}, {"Label": "Kep-00296/BEI/09-2023", "General Focus": "Climate & Carbon", "Category": "Market Oversight", "Regulation Type": "Decree of the Board of Directors", "Description": "Decree of the Board of Directors of PT Bursa Efek Indonesia No 00296/BEI/09-2023 on the Regulation of Carbon Unit Trading through Carbon Exchange Operator\n\nThis decree establishes Indonesia's domestic carbon trading infrastructure through the Indonesia Stock Exchange (IDX). It creates the regulatory framework for carbon unit trading, including operational procedures for the carbon exchange platform, trading mechanisms, and market governance.\nThe regulation enables the \"voluntary or compliance carbon market for carbon and biodiversity\" component of the blue carbon value chain by establishing a formal marketplace where certified carbon credits from mangrove projects can be traded. It provides the institutional framework for carbon trading mechanisms and creates standardized procedures for carbon unit transactions.\n\nFor blue carbon initiatives, this decree is crucial because it transforms certified mangrove carbon credits into tradeable commodities within Indonesia's domestic carbon market. It establishes the business models and trading mechanisms that allow carbon credits from mangrove conservation and restoration projects to generate revenue.\nThe carbon exchange operator regulation creates transparency, standardization, and legal certainty for carbon transactions, enabling mangrove project developers to access domestic carbon markets. This domestic trading platform complements international voluntary carbon markets, providing additional pathways for monetizing blue carbon ecosystem services and creating sustainable financing for coastal conservation efforts.", "Link": "https://www.idxcarbon.co.id/document/share/19/000595bf-4854-4c5b-983f-4f6cdbd08c5f", "degree": "2", "size": "3", "betweenness": "0", "closeness": "0.05739495798319328", "eigenvector": "0.007843988297468714", "indegree": "1", "outdegree": "1", "reach": "0.03488372093023256", "micmac_exposure": "0.6144600356967983", "micmac_influence": "0.0115237224260371"}, {"Label": "PP 21-2021", "General Focus": "Planning & Data", "Category": "Spatial Planning and Zoning", "Regulation Type": "Government Regulation", "Description": "Government Regulation No. 21 of 2023 on Spatial Planning Violations\n\nIt serves as the main legal framework for all national spatial planning activities, including land, sea, and coastal areas, including mangroves.​\n\nThe regulation provides legal frameworks for prosecuting unauthorized mangrove conversion, illegal coastal development, and violations of conservation zones. This enforcement is crucial for blue carbon projects, which require long-term ecosystem stability for sustained carbon sequestration.\n\nBy deterring spatial planning violations through clear penalties, the regulation protects mangrove areas designated for conservation and restoration. It supports integrated coastal management by providing legal recourse when mangrove zones are threatened, strengthening the foundation needed for systematic mangrove stewardship and creating the stable ecosystem conditions essential for effective blue carbon initiatives.", "Link": "https://peraturan.bpk.go.id/Details/161851/pp-no-21-tahun-2021", "degree": "8", "size": "9", "betweenness": "0.004388422035480858", "closeness": "0.12070028011204477", "eigenvector": "0.012420978877087534", "indegree": "2", "outdegree": "6", "reach": "0.09302325581395349", "micmac_exposure": "0.12036186023143612", "micmac_influence": "0.06272786685550737"}, {"Label": "PMLHK 73-2017", "General Focus": "Climate & Carbon", "Category": "", "Regulation Type": "Ministerial Regulation", "Description": "Regulation of the Minister of Environment and Forestry No. P.73/MENLHK/SETJEN/KUM.1/12/2017 on Guidelines for the Implementation and Reporting of National Greenhouse Gas Inventory", "Link": "https://jdih.maritim.go.id/id/peraturan-menteri-lingkungan-hidup-dan-kehutanan-no-p73menlhksetjenkum1122017-tahun-2017", "degree": "4", "size": "5", "betweenness": "0", "closeness": "0", "eigenvector": "0.025621854000660076", "indegree": "4", "outdegree": "0", "reach": "0.012195121951219513", "micmac_exposure": "0", "micmac_influence": "0"}, {"Label": "PMLHK 23-2021", "General Focus": "Conservation & Nature", "Category": "Forest Rehabilitation Technical Guidance", "Regulation Type": "Ministerial Regulation", "Description": "Regulation of the Minister of Environment and Forestry Number 23 of 2021 concerning the Implementation of Forest and Land Rehabilitation.\n\nIt governs the restoration and rehabilitation of degraded forest and land areas, including mangrove ecosystems. It sets out policies and procedures to improve ecosystem health, enhance biodiversity, and sustain ecosystem functions.\n\nThe regulation promotes community involvement and coordination in rehabilitation activities. This includes mechanisms to ensure that local communities benefit fairly from restoration programs through participation, livelihood support, and equitable access to resources arising from rehabilitation efforts.", "Link": "https://peraturan.bpk.go.id/Details/235350/permen-lhk-no-23-tahun-2021", "degree": "6", "size": "7", "betweenness": "0.0026610644257703078", "closeness": "0.126078431372549", "eigenvector": "0.0020701631461812558", "indegree": "1", "outdegree": "5", "reach": "0.12790697674418605", "micmac_exposure": "0.012036186023143611", "micmac_influence": "0.05239158127468272"}, {"Label": "UU 27-2007", "General Focus": "Conservation & Nature", "Category": "Management of Coastal Areas and Small Islands", "Regulation Type": "Law", "Description": "Law No. 27 of 2007 concerning Coastal Zone and Small Islands Management", "Link": "https://peraturan.bpk.go.id/Details/39911/uu-no-27-tahun-2007", "degree": "2", "size": "3", "betweenness": "0", "closeness": "0.07364145658263307", "eigenvector": "0", "indegree": "0", "outdegree": "2", "reach": "0.046511627906976744", "micmac_exposure": "0", "micmac_influence": "0.02090928895183579"}, {"Label": "Kep-00298/BEI/09-2023", "General Focus": "Climate & Carbon", "Category": "Carbon Exchange Services", "Regulation Type": "Decree of the Board of Directors", "Description": "Decree of the Board of Directors of PT Bursa Efek Indonesia No 00298/BEI/09-2023 concerning Regulation on the Supervision of Trading Through Carbon Exchange\n\nThis decree creates supervisory frameworks including trade monitoring, compliance verification, and enforcement of trading rules. It ensures transparent, orderly carbon market operations essential for building investor confidence in blue carbon credits from mangrove projects.\n\nEffective supervision protects the credibility of mangrove carbon credits and maintains market stability needed for consistent pricing. The oversight mechanisms prevent fraud and ensure legitimate transactions, supporting reliable business models for carbon trading that make blue carbon projects financially viable and sustainable for coastal conservation financing.", "Link": "https://idxcarbon.co.id/document/share/17/058c6996-9a0c-4ecb-8fe8-709150a89999", "degree": "2", "size": "3", "betweenness": "0", "closeness": "0.05739495798319328", "eigenvector": "0.007843988297468714", "indegree": "1", "outdegree": "1", "reach": "0.03488372093023256", "micmac_exposure": "0.6144600356967983", "micmac_influence": "0.0115237224260371"}, {"Label": "PMLH 2-2025", "General Focus": "Climate & Carbon", "Category": "Environmental Economic Instruments", "Regulation Type": "Ministerial Regulation", "Description": "", "Link": "https://peraturan.go.id/id/permenklhbph-no-2-tahun-2025", "degree": "3", "size": "4", "betweenness": "0.00004668534080298786", "closeness": "0.023529411764705882", "eigenvector": "0", "indegree": "1", "outdegree": "2", "reach": "0.03488372093023256", "micmac_exposure": "0", "micmac_influence": "0"}, {"Label": "UU 10-2009", "General Focus": "Conservation & Nature", "Category": "Sustainable Tourism", "Regulation Type": "Law", "Description": "Law (UU) No. 10 Year 2009 on Tourism\n\nIt emphasizes that tourism should be conducted based on principles of benefit, kinship, fairness, balance, sustainability, participation, and respect for cultural and natural diversity. The law outlines the rights and obligations of tourists, communities, businesses, and government entities involved in tourism, and promotes sustainable tourism development that enhances local welfare, creates business opportunities, and preserves the environment.\n\nIt also establishes institutions like the Indonesian Tourism Promotion Agency to improve tourism visibility and competitiveness, while ensuring protection of cultural and natural heritage. The law supports community involvement and equitable distribution of tourism benefits, aiming for tourism that respects human rights and contributes to regional development and economic growth.", "Link": "https://peraturan.bpk.go.id/Details/38598/uu-no-10-tahun-2009", "degree": "2", "size": "3", "betweenness": "0.00014005602240896358", "closeness": "0.2219607843137254", "eigenvector": "0.010350815730906278", "indegree": "1", "outdegree": "2", "reach": "0.12790697674418605", "micmac_exposure": "0.06018093011571806", "micmac_influence": "0.8654360275108185"}, {"Label": "UU 4-2023", "General Focus": "Finance & Markets", "Category": "Financial Sector Development & Governance", "Regulation Type": "Law", "Description": "Law (UU) No. 4 of 2023 on the Development and Strengthening of the Financial Sector\n\nThis law provides a comprehensive legal framework for strengthening Indonesia’s financial system, including sustainable finance instruments. This law represents a milestone in providing legal certainty for carbon trading in Indonesia, including blue carbon credits derived from mangrove ecosystems. The law mandates that all carbon transactions—domestic or international—must be conducted through the National Carbon Exchange, which is regulated and supervised by the Financial Services Authority (OJK).\n\nFor mangroves as a blue carbon sink, this law ensures that the economic value of carbon sequestration and storage can be legally traded in a transparent manner and in line with international standards. It establishes mechanisms for registration, verification, and certification to guarantee market integrity and prevent double counting.", "Link": "https://peraturan.bpk.go.id/Details/240203/uu-no-4-tahun-2023", "degree": "1", "size": "2", "betweenness": "0", "closeness": "0.05907563025210085", "eigenvector": "0", "indegree": "0", "outdegree": "1", "reach": "0.03488372093023256", "micmac_exposure": "0", "micmac_influence": "0.0115237224260371"}, {"Label": "PMKP 2-2025", "General Focus": "Governance & Policy", "Category": "Ministry of Maritime Affairs and Fisheries Organization and Work Precedures", "Regulation Type": "Ministerial Regulation", "Description": "Regulation of the Minister of Maritime Affairs and Fisheries Number 2 of 2025 on the Organization and Work Procedures of the Ministry of Maritime Affairs and Fisheries\n\nThis regulation provides the institutional framework and division of authority within the ministry. In relation to Regulation Number 1 of 2025 on the Procedures for Implementing the Carbon Economic Value of the Marine Sector, it ensures that the ministry has the organizational capacity and clear mandates to implement blue carbon and non-carbon trading mechanisms, including those directly connected to mangrove ecosystems.", "Link": "https://peraturan.bpk.go.id/Details/314437/permen-kkp-no-2-tahun-2025", "degree": "1", "size": "2", "betweenness": "0", "closeness": "0.0653781512605042", "eigenvector": "0", "indegree": "0", "outdegree": "1", "reach": "0.06976744186046512", "micmac_exposure": "0", "micmac_influence": "0.0060397854110957145"}, {"Label": "UU 32-2024", "General Focus": "Conservation & Nature", "Category": "Biodiversity and Habitat Protection", "Regulation Type": "Law", "Description": "Law (UU) Number 32 of 2024 concerning Amendment to Law Number 5 of 1990 concerning the Conservation of Living Natural Resources and their Ecosystems\n\nLaw No. 5 of 1990 laid the foundation for biodiversity and ecosystem conservation in Indonesia. Its amendment through Law No. 32 of 2024 strengthens enforcement, expands protection to coastal and mangrove ecosystems, and enhances community and local government roles, making conservation more inclusive and adaptive.", "Link": "https://peraturan.bpk.go.id/Details/295135/uu-no-32-tahun-2024", "degree": "2", "size": "3", "betweenness": "0", "closeness": "0.1084313725490196", "eigenvector": "1.1653982467172544e-37", "indegree": "1", "outdegree": "2", "reach": "0.09302325581395349", "micmac_exposure": "2.6581268872469642e-11", "micmac_influence": "0.0585406153809284"}, {"Label": "PMLHK 74-2016", "General Focus": "Governance & Policy", "Category": "Institutional Governance and Decentralized Environmental Management", "Regulation Type": "Ministerial Regulation", "Description": "Regulation of the Minister of Environment and Forestry Number P.74/menlhk/setjen/kum.1/8/2016 of 2016 concerning Guidelines for Nomenclature of Provincial and Regency / City Regional Apparatus Carrying out Government Affairs in the Field of Environment and Government Affairs in the Field of Forestry.\n\nIt defines the institutional structure and responsibilities at regional levels for managing forest and environmental governance. Clear designation of government apparatus enhances coordination and implementation of mangrove conservation, protection, restoration, and sustainable management activities within local jurisdictions, which are critical components of effective ecosystem management.", "Link": "https://peraturan.go.id/id/permen-lhk-no-p-74-menlhk-setjen-kum-1-8-2016-tahun-2016", "degree": "4", "size": "5", "betweenness": "0.00014005602240896358", "closeness": "0.023529411764705882", "eigenvector": "0.0020701631461812558", "indegree": "3", "outdegree": "1", "reach": "0.046511627906976744", "micmac_exposure": "0.06018093011571806", "micmac_influence": "0"}, {"Label": "PMHUT 1-2024", "General Focus": "Governance & Policy", "Category": "Ministry of Forestry Organization and Work Procedure", "Regulation Type": "Ministerial Regulation", "Description": "Ministry of Forestry Regulation No. 1 Year 2024 on the Organisation and Work Procedure of the Ministry of Forestry", "Link": "https://peraturan.go.id/id/permenhut-no-1-tahun-2024", "degree": "1", "size": "2", "betweenness": "0", "closeness": "0.06187675070028012", "eigenvector": "0", "indegree": "0", "outdegree": "1", "reach": "0.03488372093023256", "micmac_exposure": "0", "micmac_influence": "0.010454644475917894"}, {"Label": "PMLHK 10-2021", "General Focus": "Conservation & Nature", "Category": "Nursery Development", "Regulation Type": "Ministerial Regulation", "Description": "Minister of Environment and Forestry Regulation Number 10 of 2021 on Community Seedling Gardens\n\nThis regulation provides a guideline for the development and operation of community-based nurseries. These seedling gardens provide a sustainable source of mangrove seedlings for reforestation and rehabilitation projects in degraded coastal areas. The regulation outlines procedures for nursery establishment, seed collection, propagation, and maintenance, ensuring that seedlings are healthy and genetically suitable for local mangrove ecosystems. By empowering local communities to manage seedling production, the regulation facilitates participatory mangrove restoration, supports coastal protection, enhances carbon sequestration, and strengthens the capacity of communities to maintain and expand mangrove coverage sustainably.", "Link": "https://peraturan.bpk.go.id/Details/235326/permen-lhk-no-10-tahun-2021", "degree": "2", "size": "3", "betweenness": "0", "closeness": "0.06764705882352942", "eigenvector": "0.0020701631461812558", "indegree": "1", "outdegree": "1", "reach": "0.03488372093023256", "micmac_exposure": "0.012036186023143611", "micmac_influence": "0.01995856992248625"}, {"Label": "UU 9-2015", "General Focus": "Governance & Policy", "Category": "Local Governance & Decentralization", "Regulation Type": "Law", "Description": "Law (UU) No. 9 of 2015\nSecond Amendment to Law Number 23 of 2014 concerning Regional Government\n\nIt revises the division of authority between central, provincial, and district/city governments in managing natural resources, environment, forestry, and coastal areas.", "Link": "https://peraturan.bpk.go.id/Details/38209/uu-no-9-tahun-2015", "degree": "4", "size": "5", "betweenness": "0", "closeness": "0.1343137254901961", "eigenvector": "0", "indegree": "0", "outdegree": "4", "reach": "0.18604651162790697", "micmac_exposure": "0", "micmac_influence": "0.07293320323608447"}, {"Label": "UU 16-2016", "General Focus": "Climate & Carbon", "Category": "International Climate Commitment", "Regulation Type": "Law", "Description": "Law No. 16/2016 on the ratification of the Paris Agreement To The United Nations Framework Convention On Climate Change (Paris Agreement To The United Nations Framework Convention On Climate Change)\n\nThrough Law No. 16/2016 on the Ratification of the Paris Agreement, Indonesia legally binds itself to global commitments to reduce emissions and strengthen climate resilience. This law is not just a formal ratification, but a national legal basis for all climate policies and instruments, including the management of coastal ecosystems such as mangroves.\n\nFirstly, the law binds Indonesia to apply an ecosystem-based approach to conserve and enhance carbon sequestration. Mangroves, as one of the main coastal ecosystems, are positioned as a crucial blue carbon sink. This strengthens the value chain of mangrove ecosystem management.\n\nSecondly, the state's obligation to measure, report and verify (MRV) emissions and sequestration, as mandated by the Paris Agreement and enacted through this law, strengthens the value chain on ecosystem services. Thus, mangroves are not only valued as carbon sinks, but also as providers of other ecosystem services that can be measured and integrated in low-carbon development planning.\n\nThird, Law No. 16/2016 also brings international provisions related to carbon market standards, certification frameworks, and environmental integrity into the national legal framework. This is closely related to the value chain of certified ecosystem services, where carbon from mangroves must follow international standards in order to be recognised in trade.\n\nFourth, it provides a legal framework for carbon trading, both through international market mechanisms (ITMOs) and voluntary markets. With the inclusion of mangroves in the blue carbon category, the economic value of carbon from coastal ecosystems gains legal certainty at the national and international levels. This is in line with the blue carbon trading value chain.\n\nFinally, the Act emphasises the principles of participation, equity and equitable benefits in the implementation of market and non-market mechanisms. This ensures that coastal communities living alongside mangrove ecosystems receive fair and equitable benefits, strengthening the fair and equitable benefits value chain.", "Link": "https://peraturan.bpk.go.id/Details/37573", "degree": "5", "size": "6", "betweenness": "0", "closeness": "0.1519607843137255", "eigenvector": "0", "indegree": "0", "outdegree": "5", "reach": "0.20930232558139536", "micmac_exposure": "0", "micmac_influence": "0.07263038695365291"}, {"Label": "PBSN 14-2019", "General Focus": "Governance & Policy", "Category": "National Standard", "Regulation Type": "National Standardization Body Regulation", "Description": "", "Link": "https://peraturan.bpk.go.id/Details/170979/peraturan-bsn-no-14-tahun-2019", "degree": "1", "size": "2", "betweenness": "0", "closeness": "0.011764705882352941", "eigenvector": "0", "indegree": "0", "outdegree": "1", "reach": "0.023255813953488372", "micmac_exposure": "0", "micmac_influence": "0"}, {"Label": "PMLHK 7-2023", "General Focus": "Climate & Carbon", "Category": "Procedures for Carbon Trading in the Forestry Sector", "Regulation Type": "Ministerial Regulation", "Description": "Regulation of the Minister of Environment and Forestry of the Republic of Indonesia Number 7 of 2023 Concerning Procedures for Carbon Trading in the Forestry Sector", "Link": "https://peraturan.bpk.go.id/Details/254282/permen-lhk-no-7-tahun-2023", "degree": "6", "size": "7", "betweenness": "0.0012955182072829131", "closeness": "0.06691876750700282", "eigenvector": "0.017713692295933517", "indegree": "4", "outdegree": "2", "reach": "0.046511627906976744", "micmac_exposure": "0.4630921659823027", "micmac_influence": "0.0115237224260371"}, {"Label": "PP 45-2021", "General Focus": "Planning & Data", "Category": "National Geospatial System", "Regulation Type": "Government Regulation", "Description": "Government Regulation (PP) No. 45 of 2021 on Implementation of Geospatial Information\n\nThe regulation fundamentally establishes frameworks for collecting, managing, and sharing spatial data across Indonesia. This geospatial infrastructure directly supports the systematic approaches needed for designating and managing forest areas, including mangroves. It enables better planning for conservation, protection, and restoration activities by providing accurate mapping and spatial analysis capabilities.\n\nThe regulation provides the spatial data foundation that supports mangrove ecosystem management and planning decisions.", "Link": "https://peraturan.bpk.go.id/Details/161966/pp-no-45-tahun-2021", "degree": "4", "size": "5", "betweenness": "0", "closeness": "0.09705882352941177", "eigenvector": "0.0020701631461812558", "indegree": "1", "outdegree": "3", "reach": "0.06976744186046512", "micmac_exposure": "0.06018093011571806", "micmac_influence": "0.046351795863587"}, {"Label": "PMLHK 10-2022", "General Focus": "Conservation & Nature", "Category": "Watershed Management Planning", "Regulation Type": "Ministerial Regulation", "Description": "Regulation of the Minister of Environment and Forestry No. 10 of 2022 on the Preparation of General Plans for Watershed Forest and Land Rehabilitation and Annual Plans for Forest and Land Rehabilitation\n\nThis regulation mandates the development of comprehensive planning for rehabilitating degraded forest and land areas, including critical watersheds and coastal forest ecosystems like mangroves. It ensures that rehabilitation efforts are well-coordinated, strategic, and aligned with ecological, social, and economic objectives to restore ecosystem functions and resilience. By directing systematic restoration and rehabilitation planning, this regulation strengthens the governance and management frameworks necessary for effective mangrove ecosystem conservation and productivity.", "Link": "https://peraturan.bpk.go.id/Details/235417/permen-lhk-no-10-tahun-2022", "degree": "4", "size": "5", "betweenness": "0.00017507002801120446", "closeness": "0.07941176470588236", "eigenvector": "0.0020701631461812558", "indegree": "2", "outdegree": "2", "reach": "0.046511627906976744", "micmac_exposure": "0.012036186023143611", "micmac_influence": "0.030413214398404144"}, {"Label": "UU 1-2014", "General Focus": "Conservation & Nature", "Category": "Integrated Coastal Zone Management", "Regulation Type": "Law", "Description": "Law (UU) No. 1 of 2014 concerning Amendment to Law No. 27 of 2007 on the Management of Coastal Areas and Small Islands\n\nThe law directly addresses the conservation, protection, restoration, and production of coastal ecosystems, including mangroves. It establishes governance frameworks for private, community-based, customary, and state-owned land management types. It also mandates integrated coastal zone management practices.", "Link": "https://peraturan.bpk.go.id/Details/38521/uu-no-1-tahun-2014", "degree": "6", "size": "6", "betweenness": "0.0007469654528478057", "closeness": "0.2578431372549018", "eigenvector": "0.010350815730906278", "indegree": "1", "outdegree": "6", "reach": "0.20930232558139536", "micmac_exposure": "0.06018093011571806", "micmac_influence": "0.8184734710002012"}, {"Label": "PP 60-2007", "General Focus": "Conservation & Nature", "Category": "Fisheries Resource Conservation & Management", "Regulation Type": "Government Regulation", "Description": "Government Regulation (PP) No. 60 Year 2007 on the Conservation of Fish Resources\n\nIt provides legal framework for conserving fish resources, including ecosystem-based management, protection of spawning and nursery grounds, and habitat conservation (such as mangroves and coastal ecosystems).", "Link": "https://peraturan.bpk.go.id/Details/4783/pp-no-60-tahun-2007", "degree": "1", "size": "2", "betweenness": "0", "closeness": "0.06187675070028012", "eigenvector": "0", "indegree": "0", "outdegree": "1", "reach": "0.03488372093023256", "micmac_exposure": "0", "micmac_influence": "0.010454644475917894"}, {"Label": "UU 17-2007", "General Focus": "Governance & Policy", "Category": "National Long-Term Development Plan", "Regulation Type": "Law", "Description": "Law (UU) No. 17 Year 2007 on the National Long-Term Development Plan 2005-2025\n\n\nLaw No. 17 of 2007 sets the foundation for Indonesia’s long-term development priorities, including the integration of environmental sustainability, climate resilience, and natural resource management into national development strategies. It emphasizes the importance of ecosystem conservation, sustainable coastal and marine management, and biodiversity protection, which implicitly covers mangrove ecosystems as a critical component of climate adaptation and mitigation.\n\nThis law functions as a strategic and enabling regulation rather than an operational one. It establishes the policy direction that underpins the development of future regulations and instruments on ecosystem-based management, climate change mitigation, and low-carbon development pathways.", "Link": "https://peraturan.bpk.go.id/Details/39830/uu-no-17-tahun-2007", "degree": "2", "size": "3", "betweenness": "0.12646880974612065", "closeness": "0.11078431372549019", "eigenvector": "0.059097946228903485", "indegree": "1", "outdegree": "2", "reach": "0.16279069767441862", "micmac_exposure": "0.747843508359666", "micmac_influence": "0.07293320323608447"}, {"Label": "UU 6-2023", "General Focus": "Governance & Policy", "Category": "Regulatory Harmonization for Land/Sea Interface", "Regulation Type": "Law", "Description": "Law No. 6 of 2023 on Stipulating Government Regulation in Lieu of Law No. 2 of 2022 on Job Creation into Law\n\n\nLegal foundation supporting spatial planning reform and integration across sectors (land, sea, forest).\n\nConnects and strengthens the basis for PP 21/2021 and PP 43/2021.", "Link": "https://peraturan.bpk.go.id/Details/246523/uu-no-6-tahun-2023", "degree": "9", "size": "9", "betweenness": "0.024604953092348048", "closeness": "0.3152941176470588", "eigenvector": "0.010350815730906278", "indegree": "5", "outdegree": "9", "reach": "0.3953488372093023", "micmac_exposure": "0.3009046505785903", "micmac_influence": "1"}, {"Label": "UU 32-2009", "General Focus": "Governance & Policy", "Category": "Environmental Protection and Management", "Regulation Type": "Law", "Description": "Law (UU) No. 32 Year 2009 on Environmental Protection and Management\n\nLaw No. 32 of 2009 is the fundamental environmental law of Indonesia, establishing the legal foundation for sustainable natural resource management and environmental protection. It emphasizes the principle of intergenerational equity, the state’s responsibility to protect ecosystems, and the rights of citizens to a healthy environment.\n\nFor mangrove ecosystems, this law provides a strong legal mandate for their conservation, restoration, and sustainable use. It requires that environmental planning tools such as Strategic Environmental Assessments (KLHS) and Environmental Impact Assessments (AMDAL) consider the ecological functions of mangroves, including their role in coastal protection and carbon sequestration.\n\nThe law also introduces economic instruments for environmental management, including incentives, disincentives, and environmental funds, which open opportunities for payments for ecosystem services (PES) and the development of carbon financing mechanisms. Furthermore, it ensures that communities have the right to participate in decision-making, benefit from environmental services, and seek justice in cases of environmental harm.", "Link": "https://peraturan.bpk.go.id/Details/38771/uu-no-32-tahun-2009", "degree": "19", "size": "20", "betweenness": "0", "closeness": "0.2845098039215686", "eigenvector": "0", "indegree": "0", "outdegree": "19", "reach": "0.29069767441860467", "micmac_exposure": "0", "micmac_influence": "0.12436646734029057"}, {"Label": "PMK 216/PMK.07/2021", "General Focus": "Finance & Markets", "Category": "Fiscal Benefit-Sharing", "Regulation Type": "Ministerial Regulation", "Description": "Minister of Finance Regulation (PMK) Number 216/PMK.07/2021 on the Use, Monitoring, and Evaluation of Forestry Natural Resources Revenue Sharing Funds Reforestation Funds\n\nIt mainly regulates the distribution and accountability of reforestation funds (DBH DR). Its relevance lies more in the fair and equitable benefits dimension, since it ensures transparent allocation and monitoring of funds from forestry revenues to support reforestation activities, which could indirectly include mangroves if covered under local rehabilitation plans.", "Link": "https://peraturan.bpk.go.id/Details/209511/pmk-no-216pmk072021", "degree": "2", "size": "3", "betweenness": "0.00014005602240896358", "closeness": "0.011764705882352941", "eigenvector": "0.0004140326292362511", "indegree": "1", "outdegree": "1", "reach": "0.023255813953488372", "micmac_exposure": "0.24036754701002344", "micmac_influence": "0"}, {"Label": "PPRES 175-2024", "General Focus": "Conservation & Nature", "Category": "Institutional Framework", "Regulation Type": "President Regulation", "Description": "Presidential Regulation of the Republic of Indonesia Number 175 of 2024 Concerning the Ministry of Forestry\n\nThis regulation establishes the Ministry of Forestry as a separate entity focused exclusively on forestry affairs, following the restructuring that split the previous Ministry of Environment and Forestry. This ministry is responsible for managing, conserving, rehabilitating, and regulating Indonesia’s forest resources, including mangrove ecosystems. It oversees various directorates such as forest planning, conservation, watershed management, sustainable forest management, social forestry, and forest law enforcement. The regulation clarifies the ministry’s roles, organizational structure, and leadership, aiming to enhance the effectiveness and specialization of forest governance and management in Indonesia.", "Link": "https://peraturan.bpk.go.id/Details/306886/perpres-no-175-tahun-2024#:~:text=Perpres%20ini%20mengatur%20mengenai%20Kementerian%20Kehutanan%20yang%20menyelenggarakan,berada%20di%20bawah%20dan%20bertanggung%20jawab%20kepada%20Presiden.", "degree": "3", "size": "4", "betweenness": "0", "closeness": "0.09862745098039215", "eigenvector": "0", "indegree": "0", "outdegree": "3", "reach": "0.08139534883720931", "micmac_exposure": "0", "micmac_influence": "0.036735861904486314"}, {"Label": "PMATR 14-2021", "General Focus": "Planning & Data", "Category": "Geospatial Data Standards", "Regulation Type": "Ministerial Regulation", "Description": "Regulation of the Minister of Agrarian Affairs and Spatial Planning/Head of the National Land Agency of the Republic of Indonesia Number 14 of 2021 concerning Guidelines for the Preparation of Databases and Presentation of Maps of Provincial, Regency, and City Spatial Plans, as well as Maps of Regency/City Spatial Detail Plans.\n\nPMATR 14/2021 provides technical guidelines for preparing spatial databases and maps. This regulation is especially relevant for mangrove ecosystem management, as it enables the creation of consistent, standardized, and digitalized spatial datasets. Such data are crucial for monitoring mangrove extent, identifying areas of degradation, and guiding restoration priorities. Furthermore, accurate mapping strengthens the basis for ecological fiscal transfers, carbon accounting, and other incentive mechanisms that depend on reliable ecosystem data.", "Link": "https://peraturan.bpk.go.id/Details/209801/permen-agrariakepala-bpn-no-14-tahun-2021", "degree": "2", "size": "3", "betweenness": "0.00046685340802987853", "closeness": "0.06764705882352942", "eigenvector": "0.0041403262923625115", "indegree": "1", "outdegree": "1", "reach": "0.03488372093023256", "micmac_exposure": "0.07221711613886167", "micmac_influence": "0.01995856992248625"}, {"Label": "PP 28-2011", "General Focus": "Conservation & Nature", "Category": "Area-Based Conservation", "Regulation Type": "Government Regulation", "Description": "Government Regulation (PP) No. 28 of 2011 concerning Management of Nature Reserve Areas and Nature Conservation Areas", "Link": "https://peraturan.bpk.go.id/Details/5157", "degree": "4", "size": "5", "betweenness": "0.0030812324929971988", "closeness": "0.10901960784313726", "eigenvector": "5.9435310582579976e-36", "indegree": "1", "outdegree": "4", "reach": "0.10465116279069768", "micmac_exposure": "4.518815708319839e-10", "micmac_influence": "0.02273231460698031"}, {"Label": "Kep-00148/BEI/09-2024", "General Focus": "Climate & Carbon", "Category": "NEK in Marine & Fisheries", "Regulation Type": "Decree of the Board of Directors", "Description": "Decree of the Board of Directors of PT Bursa Efek Indonesia Number: Kep-00148/BEI/09-2024 concerning regulations on the use of carbon exchange services\n\nThis decree defines how market participants can utilize carbon exchange services, including registration requirements, platform access procedures, and service utilization guidelines. It creates the practical framework for carbon credit holders to access the domestic carbon market.\n\nFor blue carbon initiatives, this regulation enables mangrove project developers to practically engage with Indonesia's carbon exchange, providing clear procedures for listing and trading blue carbon credits. It establishes the operational pathways that transform certified mangrove carbon credits into tradeable assets, supporting the commercialization of coastal ecosystem services through Indonesia's domestic carbon market infrastructure.", "Link": "https://wplibrary.co.id/sites/default/files/KEP-00148_BEI_09-2024.pdf", "degree": "2", "size": "3", "betweenness": "0", "closeness": "0.05739495798319328", "eigenvector": "0.007843988297468714", "indegree": "1", "outdegree": "1", "reach": "0.03488372093023256", "micmac_exposure": "0.6144600356967983", "micmac_influence": "0.0115237224260371"}, {"Label": "PPRES 39-2019", "General Focus": "Planning & Data", "Category": "National Data Transparency", "Regulation Type": "President Regulation", "Description": "Presidential Regulation (PERPRES) Number 39 of 2019 concerning One Data Indonesia\n\nThis regulation mandates the standardization and synchronization of data collection, management, and dissemination to ensure reliable, accessible, and interoperable data. It facilitates comprehensive and accurate baseline data, monitoring, and reporting essential for effective decision-making, planning, restoration, and conservation efforts.", "Link": "https://peraturan.bpk.go.id/Details/108813/perpres-no-39-tahun-2019", "degree": "2", "size": "3", "betweenness": "0", "closeness": "0.08529411764705884", "eigenvector": "0", "indegree": "0", "outdegree": "2", "reach": "0.05813953488372093", "micmac_exposure": "0", "micmac_influence": "0.03589715138766911"}, {"Label": "KDPJPRL 41-2021", "General Focus": "Conservation & Nature", "Category": "", "Regulation Type": "Directorate Regulation", "Description": "", "Link": "https://www.bing.com/ck/a?!&&p=7a71a924814e98d399143c32edb7467abfb342c65cb785b6998009ba1d28cb54JmltdHM9MTc3MDg1NDQwMA&ptn=3&ver=2&hsh=4&fclid=1ec56a09-27ea-6615-06e3-7cf4269667a4&psq=Keputusan+Direktur+Jenderal+Pengelolaan+Ruang+Laut+Nomor+41+Tahun+2021+tentang+Pedoman+Teknis+Penyajian+Informasi+Geospasial+Kawasan+Konservasi&u=a1aHR0cHM6Ly9qZGloLmtrcC5nby5pZC9wZXJhdHVyYW4vYzU2YWYtNDEuLWtlcGRpcmplbi1wcmwtbm8tNDEtdGgtMjAyMS1wZW55YWppYW4taWcta2F3YXNhbi1rb25zZXJ2YXNpLnBkZg", "degree": "5", "size": "6", "betweenness": "0.00046685340802987853", "closeness": "0.06764705882352942", "eigenvector": "0.010350815730906278", "indegree": "4", "outdegree": "1", "reach": "0.03488372093023256", "micmac_exposure": "0.2046151623934414", "micmac_influence": "0.01995856992248625"}, {"Label": "PMATR 13-2021", "General Focus": "Planning & Data", "Category": "Spatial Permit Synchronization", "Regulation Type": "Ministerial Regulation", "Description": "Minister of Agrarian Affairs/National Land Agency Regulation No. 13 of 2021 on Spatial Use Permit Implementation and Program Synchronization.\n\nPMATR 13/2021 governs the issuance of spatial use permits and the synchronization of development programs. For mangrove areas, this regulation ensures that any permitted activity aligns with the spatial designations established under the RTRW or RDTR. It prevents overlapping or conflicting permits that could otherwise compromise mangrove protection, while also supporting the integration of mangrove rehabilitation programs into broader regional development agendas.", "Link": "https://peraturan.bpk.go.id/Details/209797/permen-agrariakepala-bpn-no-13-tahun-2021", "degree": "2", "size": "3", "betweenness": "0.00046685340802987853", "closeness": "0.06764705882352942", "eigenvector": "0.0041403262923625115", "indegree": "1", "outdegree": "1", "reach": "0.03488372093023256", "micmac_exposure": "0.07221711613886167", "micmac_influence": "0.01995856992248625"}, {"Label": "KMLHK 1027-2023", "General Focus": "Climate & Carbon", "Category": "Carbon Market (Forestry Sector)", "Regulation Type": "Ministerial Decree", "Description": "Decision of The Minister of Environment and Forestry of The Republic of Indonesia, SK.1027/Menlhk/Phl/Kum.1/9/2023 On Carbon Trading Roadmap for The Forestry Sector", "Link": "https://phl.menlhk.go.id/media/publikasi/publikasi_file_1700463144.pdf", "degree": "6", "size": "7", "betweenness": "0.0018907563025210082", "closeness": "0.07476190476190478", "eigenvector": "0.027627843739583487", "indegree": "3", "outdegree": "3", "reach": "0.05813953488372093", "micmac_exposure": "0.4045943047681864", "micmac_influence": "0.0115237224260371"}, {"Label": "PPRES 27-2014", "General Focus": "Planning & Data", "Category": "Geo-Information Infrastructure", "Regulation Type": "President Regulation", "Description": "Presidential Regulation (PERPRES) No. 27 of 2014 on the National Geospatial Information Network\n\nIt creates a network of geospatial data nodes across government institutions at central and local levels to collect, maintain, update, exchange, and disseminate geospatial information. The regulation mandates the Geospatial Information Agency (Badan Informasi Geospasial or BIG) as the central coordinating body responsible for integrating and managing the network nodes.\n\nThe regulation supports interoperability, standardization, data sharing, and accessibility to provide reliable and accountable geospatial information for various sectors. It is a foundation for spatial planning, policy formulation, development planning, environmental management, and public service delivery. The network nodes operate clearinghouse units connected via a national geospatial information network, Ina-Geoportal, facilitating data discovery and use across sectors and regions.", "Link": "https://peraturan.bpk.go.id/Details/41513/perpres-no-27-tahun-2014", "degree": "3", "size": "4", "betweenness": "0", "closeness": "0.08529411764705884", "eigenvector": "0.0020701631461812558", "indegree": "1", "outdegree": "2", "reach": "0.05813953488372093", "micmac_exposure": "0.06018093011571806", "micmac_influence": "0.03589715138766911"}, {"Label": "PMK 180/PMK.05/2022", "General Focus": "Finance & Markets", "Category": "Mangrove Rehabilitation Finance", "Regulation Type": "Ministerial Regulation", "Description": "Minister of Finance Regulation (PMK) Number 180/PMK.05/2022 concerning Procedures for Managing Mangrove Rehabilitation Funds\n\nThis regulation is directly tied to mangrove ecosystem management because it establishes a financial mechanism to support large-scale rehabilitation efforts, ensuring that degraded mangrove areas are restored in a structured and accountable way. By regulating how funds are managed and allocated, this framework strengthens ecological functions such as coastal protection, carbon sequestration, and biodiversity conservation.\n\nAt the same time, it reflects the principle of fair and equitable benefits by channeling rehabilitation financing not only for ecological outcomes but also to involve and empower local communities who depend on mangroves for their livelihoods. Through transparent distribution and monitoring of funds, the regulation seeks to balance environmental restoration with social and economic inclusion", "Link": "https://peraturan.bpk.go.id/Details/232904/pmk-no-180pmk052022", "degree": "5", "size": "6", "betweenness": "0.00718954248366013", "closeness": "0.07647058823529412", "eigenvector": "0.0020701631461812558", "indegree": "3", "outdegree": "2", "reach": "0.046511627906976744", "micmac_exposure": "0.012036186023143611", "micmac_influence": "0.01995856992248625"}, {"Label": "PMLHK 27-2021", "General Focus": "Governance & Policy", "Category": "Environmental Quality Index", "Regulation Type": "Ministerial Regulation", "Description": "Regulation of the Minister of Environment and Forestry of the Republic of Indonesia Number 27 of 2021 Concerning the Environmental Quality Index", "Link": "https://peraturan.bpk.go.id/Details/235366/permen-lhk-no-27-tahun-2021", "degree": "3", "size": "4", "betweenness": "0.000035014005602240894", "closeness": "0.011764705882352941", "eigenvector": "0", "indegree": "2", "outdegree": "1", "reach": "0.023255813953488372", "micmac_exposure": "0", "micmac_influence": "0"}, {"Label": "KPres 32-1990", "General Focus": "Conservation & Nature", "Category": "Coastal Zone and Protected Area Management", "Regulation Type": "Presidential Decree", "Description": "Presidential Decree (KEPPRES) No. 32 of 1990 on Protected Area Management\n\nThis regulation declares mangroves as protected areas, setting land-use restrictions and management standards", "Link": "https://peraturan.bpk.go.id/Details/63908/keppres-no-32-tahun-1990", "degree": "1", "size": "2", "betweenness": "0", "closeness": "0.023529411764705882", "eigenvector": "0", "indegree": "0", "outdegree": "1", "reach": "0.046511627906976744", "micmac_exposure": "0", "micmac_influence": "0"}, {"Label": "PPres 56-2019", "General Focus": "Conservation & Nature", "Category": "Integrated Protected Area Management", "Regulation Type": "President Regulation", "Description": "Presidential Regulation (PERPRES) Number 56 of 2019 on the National Action Plan for Integrated Management of National Parks and National Marine Protected Areas 2018-2025\n\nPresidential Regulation No. 56 of 2019 on the National Action Plan for Integrated Management of National Parks and National Marine Protected Areas 2018–2025 provides the policy foundation for strengthening conservation across terrestrial and marine ecosystems. Although it primarily focuses on national parks and marine protected areas, the regulation has direct relevance to mangrove ecosystems, many of which are located within these protected zones. By mandating integrated and cross-sectoral management, it ensures that mangroves are conserved not only as isolated ecosystems but as integral components of broader ecological landscapes.", "Link": "https://peraturan.bpk.go.id/Details/121654/perpres-no-56-tahun-2019", "degree": "8", "size": "9", "betweenness": "0.00938375350140056", "closeness": "0.06764705882352942", "eigenvector": "0.006210489438543767", "indegree": "7", "outdegree": "1", "reach": "0.03488372093023256", "micmac_exposure": "0.18054279082561703", "micmac_influence": "0.01995856992248625"}, {"Label": "PP 27-2025", "General Focus": "Conservation & Nature", "Category": "Mangrove Protection and Management Framework", "Regulation Type": "Government Regulation", "Description": "Government Regulation No. 27 Year 2025 on The Protection and Management of Mangrove Ecosystems\n\nThis regulation establishes a comprehensive framework specifically dedicated to the protection and management of mangrove ecosystems. This regulation addresses the full cycle of governance, from protection and utilization to rehabilitation, monitoring, and community involvement, while fostering coordination among different sectors such as forestry, marine affairs, and spatial planning.", "Link": "https://peraturan.bpk.go.id/Details/320198/pp-no-27-tahun-2025", "degree": "5", "size": "6", "betweenness": "0.037289915966386554", "closeness": "0.09274509803921568", "eigenvector": "0.04664138076231331", "indegree": "2", "outdegree": "4", "reach": "0.06976744186046512", "micmac_exposure": "0.6659012632913474", "micmac_influence": "0.041936936824441245"}, {"Label": "PPRES 98-2021", "General Focus": "Governance & Policy", "Category": "National Carbon Pricing Framework", "Regulation Type": "President Regulation", "Description": "Presidential Regulation of the Republic of Indonesia No. 98 of 2021 Concerning the Implementation of Carbon Economic Value for Achieving Nationally Determined Contribution Targets and Controlling Greenhouse Gas Emissions in National Development.\n\nThis regulation outlines policies, roles, and mechanisms for integrating carbon pricing, carbon trading, and other market-based instruments into the national economy to incentivize emissions reductions. It establishes frameworks for coordinating government agencies, regulating carbon market activities, and ensuring monitoring, reporting, and verification of emissions and carbon credits. Additionally, it supports sustainable development goals by promoting low-carbon growth and encouraging investment in carbon reduction projects across sectors, including forestry and land use. This regulation is central to advancing Indonesia’s climate commitments through economic valuation of carbon emissions and fostering an inclusive, well-regulated carbon market.", "Link": "https://peraturan.bpk.go.id/Details/187122/perpres-no-98-tahun-2021#:~:text=Perpres%20ini%20mengatur%20mengenai%3A%201%29%20maksud%2C%20tujuan%2C%20dan,mencapai%20NDC%20dan%20pengendalian%20Emisi%20Gas%20Rumah%20Kaca%2FGRK", "degree": "15", "size": "16", "betweenness": "0.12547441198701703", "closeness": "0.17254901960784316", "eigenvector": "0.02740035250148712", "indegree": "4", "outdegree": "11", "reach": "0.20930232558139536", "micmac_exposure": "0.47809601428656695", "micmac_influence": "0.1012511470977002"}, {"Label": "PMLH 26-2025", "General Focus": "Conservation & Nature", "Category": "Mangrove Ecosystem Inventory", "Regulation Type": "Ministerial Regulation", "Description": "", "Link": "https://peraturan.go.id/files/permenklhbph-no-26-tahun-2025.pdf", "degree": "2", "size": "3", "betweenness": "0", "closeness": "0.06568627450980392", "eigenvector": "0.021426482058468015", "indegree": "1", "outdegree": "1", "reach": "0.03488372093023256", "micmac_exposure": "0.35507557050168465", "micmac_influence": "0.01995856992248625"}, {"Label": "PP 46-2017", "General Focus": "Climate & Carbon", "Category": "Environmental Economic Instruments", "Regulation Type": "Government Regulation", "Description": "Government Regulation No. 46/2Ol7 on Environmental Economic Instruments.\n\nIt introduces mechanisms such as payments for ecosystem services, environmental fees, incentives, and market-based instruments to internalize environmental costs and promote sustainable use of natural resources. The regulation facilitates the valuation and monetization of ecosystem benefits and links economic incentives to compliance with environmental standards, ensuring transparency and credibility in environmental certification processes. It also enables the operation of environmental commodity markets, including carbon trading, and promotes the fair and equitable distribution of economic benefits to local communities and stakeholders involved in managing and conserving ecosystems.", "Link": "https://peraturan.bpk.go.id/Details/64701", "degree": "7", "size": "8", "betweenness": "0", "closeness": "0.17647058823529416", "eigenvector": "0", "indegree": "0", "outdegree": "7", "reach": "0.22093023255813954", "micmac_exposure": "0", "micmac_influence": "0.08206186355109171"}, {"Label": "PDKSDAE 4/2-2021", "General Focus": "Climate & Carbon", "Category": "MRV Guideline Carbon Projects", "Regulation Type": "Directorate Regulation", "Description": "Perdirjen P.1/KSDAE/BPE2/KSA.4/2021 is issued by Indonesia's Directorate General of Natural Resources and Ecosystem Conservation (KSDAE) under the Ministry of Environment and Forestry.\nIn the context of mangroves, it establishes technical guidelines for assessing the management effectiveness of essential ecosystems (Kawasan Ekosistem Esensial/KEE), which include mangrove ecosystems. The regulation outlines the assessment framework to measure how well these essential ecosystem areas, including coastal mangrove zones, are being managed toward their designated conservation and management goals. It covers definitions, scope, and the stages of the management effectiveness evaluation process.", "Link": "https://www.scribd.com/document/518073987/Perdirjen-P-1-KSDAE-BPE2-KSA-4-2-2021", "degree": "9", "size": "10", "betweenness": "0.0017290805210973276", "closeness": "0.023529411764705882", "eigenvector": "0.0041403262923625115", "indegree": "7", "outdegree": "2", "reach": "0.03488372093023256", "micmac_exposure": "0.07221711661732451", "micmac_influence": "0"}, {"Label": "PMATR 12-2021", "General Focus": "Planning & Data", "Category": "Land Use Evaluation", "Regulation Type": "Ministerial Regulation", "Description": "Regulation of the Minister of Agrarian Affairs and Spatial Planning/Head of the National Land Agency of the Republic of Indonesia Number 12 of 2021 concerning Land Technical Considerations\n\nPMATR 12/2021 introduces the requirement for land technical considerations in development licensing. This regulation functions as a safeguard, ensuring that decisions on land allocation incorporate factors such as environmental carrying capacity and land suitability. In practice, it means that mangrove ecosystems cannot be easily converted for incompatible purposes, such as industrial or residential expansion, without first passing a rigorous technical and ecological assessment.", "Link": "https://peraturan.bpk.go.id/Details/209796/permen-agrariakepala-bpn-no-12-tahun-2021", "degree": "2", "size": "3", "betweenness": "0.00046685340802987853", "closeness": "0.06764705882352942", "eigenvector": "0.0041403262923625115", "indegree": "1", "outdegree": "1", "reach": "0.03488372093023256", "micmac_exposure": "0.07221711613886167", "micmac_influence": "0.01995856992248625"}, {"Label": "KMLHK 168-2022", "General Focus": "Climate & Carbon", "Category": "National Carbon Accounting (FOLU)", "Regulation Type": "Ministerial Decree", "Description": "Minister of Environment and Forestry Decree No. 168 of 2022 on Indonesia's Forestry and Other Land Use (FOLU) Net Sink 2030 for Climate Change Control\n\nIt  outlines a national roadmap for achieving carbon neutrality in the forestry and land use sector by 2030. \n\nIn relation to mangrove ecosystem management, it highlights mangrove conservation and large-scale rehabilitation as critical strategies for carbon sequestration, climate adaptation, and coastal protection, positioning mangroves as key contributors to Indonesia’s climate change mitigation targets.", "Link": "https://pdasrh.menlhk.go.id/newsdetail.php?id=384-Indonesia-FoLU-Net-Sink-2030#:~:text=Berdasarkan%20Keputusan%20Menteri%20Lingkungan%20Hidup%20dan%20Kehutanan%20nomor,on%20Low%20Carbon%20and%20Climate%20Resilience%20%28LTS-LCCR%29%202050.", "degree": "10", "size": "11", "betweenness": "0.005732681961673559", "closeness": "0.106078431372549", "eigenvector": "0.015959915486042763", "indegree": "5", "outdegree": "5", "reach": "0.09302325581395349", "micmac_exposure": "0.4960076184004813", "micmac_influence": "0.03752207775961906"}, {"Label": "PMATR 11-2021", "General Focus": "Planning & Data", "Category": "Spatial Planning Procedures", "Regulation Type": "Ministerial Regulation", "Description": "Regulation of the Minister of Agrarian Affairs and Spatial Planning/Head of the National Land Agency of the Republic of Indonesia Number 11 of 2021 concerning Procedures for the Preparation, Review, Revision, and Issuance of Substance Approval of Provincial, Regency, City Spatial Plans and Detailed Spatial Plans\n\nPMATR 11/2021 provides the foundation by setting out the procedures for the preparation, review, and approval of spatial plans (RTRW and RDTR) at the provincial, regency, and city levels. This regulation is vital for mangroves, as it ensures that conservation and restoration zones are formally embedded in spatial planning documents. Through this process, any attempt to designate mangrove areas for alternative land uses can be reviewed, revised, or rejected at the approval stage.", "Link": "https://peraturan.bpk.go.id/Details/209795/permen-agrariakepala-bpn-no-11-tahun-2021#:~:text=Peraturan%20Menteri%20Agraria%20dan%20Tata%20Ruang%2F%20Kepala%20Badan,Kabupaten%2C%20Kota%2C%20dan%20Rencana%20Detail%20Tata%20Ruang%2011", "degree": "2", "size": "3", "betweenness": "0.00046685340802987853", "closeness": "0.06764705882352942", "eigenvector": "0.0041403262923625115", "indegree": "1", "outdegree": "1", "reach": "0.03488372093023256", "micmac_exposure": "0.07221711613886167", "micmac_influence": "0.01995856992248625"}, {"Label": "PMLHK 72-2017", "General Focus": "Climate & Carbon", "Category": "MRV Systems for Climate Mitigation", "Regulation Type": "Ministerial Regulation", "Description": "Regulation of the Minister of Environment and Forestry of the Republic of Indonesia Number P.72/MENLHK/SETJEN/KUM.1/12/2017\nConcerning Guidelines for the Implementation of Measurement, Reporting, and Verification of Climate Change Control Actions and Resources\n\nThis provides guidelines for the implementation of Measurement, Reporting, and Verification (MRV) of climate change control actions and resources, directly supporting the assessment of ecosystem services in mangrove ecosystems. This regulation ensures that both carbon-related functions, such as carbon storage, and co-benefits including biodiversity conservation, water quality maintenance, climate regulation, and contributions to food and income generation are systematically identified, measured, and verified.", "Link": "https://jdih.kemenkoinfra.go.id/cfind/source/files/permen-lhk/permenlhk-nomor-p.72-tahun-2017.pdf", "degree": "5", "size": "6", "betweenness": "0.00031451469476679553", "closeness": "0.023529411764705882", "eigenvector": "0.0020701631461812558", "indegree": "3", "outdegree": "2", "reach": "0.03488372093023256", "micmac_exposure": "0.06018093011571806", "micmac_influence": "0"}, {"Label": "PMLHK 105-2018", "General Focus": "Conservation & Nature", "Category": "Forest and Land Rehabilitation Incentives and Control", "Regulation Type": "Ministerial Regulation", "Description": "Minister of Environment and Forestry Regulation No. 105/2018 on Procedures for Implementation, Supporting Activities, Provision of Incentives, and Guidance and Control of Forest and Land Rehabilitation Activities\n\nThis regulation provides the legal and operational framework for rehabilitating degraded coastal and mangrove areas. The regulation specifies the planning, implementation, monitoring, and evaluation of restoration activities, including mangrove planting, site preparation, and post-planting maintenance. It also provides general information on incentive mechanisms for communities, local governments, and private actors to participate in mangrove rehabilitation.", "Link": "https://peraturan.bpk.go.id/Details/163515/permen-lhk-no-105-tahun-2018", "degree": "6", "size": "7", "betweenness": "0.0034776132675292336", "closeness": "0.08529411764705884", "eigenvector": "0.0020701631461812558", "indegree": "3", "outdegree": "3", "reach": "0.05813953488372093", "micmac_exposure": "0.06018093011571806", "micmac_influence": "0.01995856992248625"}, {"Label": "PMK 137/PMK.01/2019", "General Focus": "Finance & Markets", "Category": "Organisation and Work Procedure Indonesia Environment Fund", "Regulation Type": "Ministerial Regulation", "Description": "Regulation of the Minister of Finance (PMK) Number 137/PMK.01/2019 on the Organisation and Work Procedures of the Environmental Fund Management Agency\n\nThe regulation establishes the procedures for how environmental projects get funded, including criteria for project selection, funding approval processes, and financial disbursement mechanisms. This directly supports the foundational work of mangrove ecosystem management.\n\nThis regulation establishes the institutional framework for Indonesia's Environmental Fund Management Agency (BPDLH - Badan Pengelola Dana Lingkungan Hidup), which is specifically designed to manage environmental financing and funding mechanisms. The agency serves as the financial intermediary for environmental programs, including climate and conservation initiatives.\n\nThe Environmental Fund Management Agency operates as Indonesia's green financing institution, responsible for channeling funds from various sources including government budgets, international climate finance, and potentially future carbon credit revenues to environmental projects and programs. This directly aligns with the benefit allocation stage of the blue carbon value chain, where financial benefits from carbon trading and ecosystem services need to be distributed fairly among stakeholders.\n\nThe regulation would establish the organizational structure, operational procedures, and governance mechanisms for how environmental funds are managed, allocated, and distributed. This includes frameworks for ensuring transparent fund management, establishing criteria for fund allocation, and creating accountability mechanisms for environmental financing.\nFor blue carbon initiatives, this agency could serve as the institutional mechanism for receiving revenues from carbon credit sales and ensuring these benefits are allocated fairly among coastal communities, conservation organizations, and government entities involved in mangrove protection and restoration efforts.", "Link": "https://peraturan.bpk.go.id/Details/128168/pmk-no-137pmk012019", "degree": "5", "size": "6", "betweenness": "0.001003734827264239", "closeness": "0.06540616246498601", "eigenvector": "0.0020701631461812558", "indegree": "4", "outdegree": "1", "reach": "0.046511627906976744", "micmac_exposure": "0.06018093011571806", "micmac_influence": "0.010454644475917894"}, {"Label": "PPRES 23-2021", "General Focus": "Planning & Data", "Category": "One Map Policy Governance", "Regulation Type": "President Regulation", "Description": "Presidential Regulation (PERPRES) Number 23 of 2021: Amendment to Presidential Regulation Number 9 of 2016 Regarding the Acceleration of Implementation of the One Map Policy at a Scale of 1:50,000.\n\nThis regulation advances spatial data integration and harmonization across sectors to provide a single, standardized map base. Accurate and unified spatial data is critical for effective mangrove ecosystem management, enabling coordinated planning, zoning, conservation, and resource use decisions. It helps resolve overlapping claims and conflicts in land and forest management, which are foundational for sustainable ecosystem stewardship.", "Link": "https://peraturan.bpk.go.id/Details/164964/perpres-no-23-tahun-2021", "degree": "2", "size": "3", "betweenness": "0", "closeness": "0.07364145658263306", "eigenvector": "0", "indegree": "0", "outdegree": "2", "reach": "0.046511627906976744", "micmac_exposure": "0", "micmac_influence": "0.026393225941100752"}, {"Label": "PMKP 1-2025", "General Focus": "Climate & Carbon", "Category": "Marine Carbon Market Instruments", "Regulation Type": "Ministerial Regulation", "Description": "Regulation of the Minister of Maritime Affairs and Fisheries Number 1 of 2025 concerning Procedures for Implementing the Carbon Economic Value of the Marine Sector\n\nThis regulation provides the framework for applying the Carbon Economic Value (NEK) in the marine sector, covering blue carbon ecosystems such as mangroves and seagrass, as well as fisheries and aquaculture activities. It sets out mechanisms for carbon trading, emission offsets, and performance-based payments, ensuring that verified emission reductions translate into economic incentives. Importantly, the regulation emphasizes inclusive participation of communities, local governments, and the private sector, thereby promoting fair and equitable benefit-sharing from marine carbon initiatives, while supporting conservation and sustainable use of marine ecosystems.\n\nTt enables mangrove, seagrass, and other coastal ecosystems to generate tradable carbon credits while also recognizing non-carbon benefits such as biodiversity protection, coastal resilience, and community livelihoods, thus linking ecosystem services with both carbon markets and broader sustainable financing mechanisms.", "Link": "https://peraturan.bpk.go.id/Details/314428/permen-kkp-no-1-tahun-2025", "degree": "7", "size": "8", "betweenness": "0.0026610644257703078", "closeness": "0.08456582633053222", "eigenvector": "0.017299659666697265", "indegree": "3", "outdegree": "4", "reach": "0.06976744186046512", "micmac_exposure": "0.4510559799591591", "micmac_influence": "0.0115237224260371"}, {"Label": "POJK 14-2023", "General Focus": "Climate & Carbon", "Category": "Carbon Exchange Regulation", "Regulation Type": "Financial Services Authority Regulation", "Description": "Financial Services Authority Regulation No. 14 of 2023 on Carbon Trading through Carbon Exchanges\n\nIt provides the overarching legal and regulatory framework for Indonesia’s carbon market, including licensing, governance, and accountability of carbon exchange operators.", "Link": "https://www.scribd.com/document/667608309/JK-14-Tahun-2023-PERDAGANGAN-KARBON-MELALUI-BURSA-KARBON", "degree": "7", "size": "8", "betweenness": "0.02857142857142857", "closeness": "0.09717086834733893", "eigenvector": "0.017299659666697265", "indegree": "2", "outdegree": "5", "reach": "0.08139534883720931", "micmac_exposure": "0.4510559799591591", "micmac_influence": "0.029643078659324244"}, {"Label": "UU 41-1999", "General Focus": "Conservation & Nature", "Category": "Legal Basis for Forest Governance", "Regulation Type": "Law", "Description": "Law (UU) No. 41 Year 1999 on Forestry\n\nTis law is the fundamental legal framework for forest management in Indonesia. It establishes that forests, including mangroves, are state-controlled assets that provide multiple benefits for present and future generations. The law mandates sustainable forest management based on principles of benefit, sustainability, democracy, equity, transparency, and integration. It regulates forest area designation, inventory, planning, and control to maintain diverse forest functions such as conservation, protection, and production. The law recognizes community participation and customary rights, promoting social forestry and equitable benefit-sharing. Overall, it provides the foundation for managing forest ecosystems, safeguarding ecosystem services, enabling certification, supporting carbon trading, and ensuring fair distribution of benefits.", "Link": "https://peraturan.bpk.go.id/Details/45373/uu-no-41-tahun-1999", "degree": "17", "size": "18", "betweenness": "0.019889733671246277", "closeness": "0.3756862745098038", "eigenvector": "0.010350815730906278", "indegree": "1", "outdegree": "17", "reach": "0.4186046511627907", "micmac_exposure": "0.06018093011571806", "micmac_influence": "0.7605787694063502"}, {"Label": "PMLHK 11-2022", "General Focus": "Governance & Policy", "Category": "", "Regulation Type": "Ministerial Regulation", "Description": "Regulation of the Minister of Environment and Forestry of the Republic of Indonesia Number 11 of 2022 Concerning Professions and Competencies of Forest Management Technical Personnel\n\nThis regulates professional standards, certification, and competencies for technical staff in forest management, including carbon accounting.", "Link": "https://peraturan.bpk.go.id/Details/235418/permen-lhk-no-11-tahun-2022", "degree": "4", "size": "5", "betweenness": "0.00028011204481792715", "closeness": "0.07647058823529412", "eigenvector": "0.0024841957754175065", "indegree": "2", "outdegree": "2", "reach": "0.046511627906976744", "micmac_exposure": "0.25240373303316704", "micmac_influence": "0.01995856992248625"}, {"Label": "PP 74-2012", "General Focus": "Finance & Markets", "Category": "Public Service Entity Support", "Regulation Type": "Government Regulation", "Description": "Government Regulation (PP) No. 74 of 2012 concerning\nAmendments to Government Regulation No. 23 of 2005 concerning Financial Management of Public Service Entities\n\nIt provides flexibility in managing state funds through BLU mechanisms. In relation to Presidential Regulation No. 77 of 2018 on Environmental Fund Management, it underpins the financial governance of the Environmental Fund Management Agency (BPDLH), ensuring that revenues from carbon trading, rehabilitation funds, or ecosystem service payments can be managed transparently and distributed fairly and equitably, including for mangrove ecosystem programs and community beneficiaries.", "Link": "https://peraturan.bpk.go.id/Details/5288/pp-no-74-tahun-2012", "degree": "1", "size": "2", "betweenness": "0", "closeness": "0.08260504201680674", "eigenvector": "0", "indegree": "0", "outdegree": "1", "reach": "0.08139534883720931", "micmac_exposure": "0", "micmac_influence": "0.017563507837132813"}, {"Label": "PP 77-2018", "General Focus": "Finance & Markets", "Category": "Environmental Fiscal Instruments", "Regulation Type": "Government Regulation", "Description": "Presidential Regulation (PERPRES) No. 77/2018 on Environmental Fund Management\n\nThis regulation establishes a system and mechanism for managing environmental funds sourced from public and private entities to finance environmental protection and restoration efforts. It emphasizes principles of transparency, accountability, and fairness in fund management. The funds support initiatives such as pollution control, environmental restoration, and conservation incentives, which can include benefit-sharing schemes with local communities involved in mangrove conservation and restoration.", "Link": "https://peraturan.bpk.go.id/Details/94707/perpres-no-77-tahun-2018", "degree": "8", "size": "9", "betweenness": "0.003606442577030812", "closeness": "0.11196078431372546", "eigenvector": "0", "indegree": "3", "outdegree": "5", "reach": "0.09302325581395349", "micmac_exposure": "0", "micmac_influence": "0.03350208930231567"}, {"Label": "PMLH 15-2012", "General Focus": "Governance & Policy", "Category": "Economic Valuation", "Regulation Type": "Ministerial Regulation", "Description": "", "Link": "https://www.peraturan.go.id/files/bn977-2012.pdf", "degree": "2", "size": "3", "betweenness": "0", "closeness": "0.011764705882352941", "eigenvector": "0", "indegree": "1", "outdegree": "1", "reach": "0.023255813953488372", "micmac_exposure": "0", "micmac_influence": "0"}, {"Label": "UU 4-2011", "General Focus": "Planning & Data", "Category": "Legal Basis of Geospatial System", "Regulation Type": "Law", "Description": "Law No. 4 of 2011 on Geospatial Information\n\nThe law provides the geospatial data infrastructure needed for foundational mapping, planning, and monitoring.", "Link": "https://peraturan.bpk.go.id/Details/39136/uu-no-4-tahun-2011", "degree": "7", "size": "8", "betweenness": "0.0017973856209150326", "closeness": "0.2617647058823529", "eigenvector": "0.010350815730906278", "indegree": "1", "outdegree": "7", "reach": "0.16279069767441862", "micmac_exposure": "0.06018093011571806", "micmac_influence": "0.8446264538168871"}, {"Label": "PMLHK 4-2023", "General Focus": "Social & Community", "Category": "Social Forestry Implementation", "Regulation Type": "Ministerial Regulation", "Description": "Minister of Environment and Forestry Regulation No. 4 of 2023 on Social Forestry Management in Forest Areas with Special Management\n\nThis regulation allows communities to participate in activities such as mangrove rehabilitation, sustainable harvesting of non-timber forest products, and monitoring of ecosystem health. It provides clear guidelines for granting social forestry permits, defining the roles and responsibilities of community groups, and linking these activities with conservation objectives. By formalizing community management, the regulation ensures that mangrove rehabilitation and protection efforts are coordinated with government programs, support carbon sequestration initiatives, and strengthen coastal resilience, while also generating livelihood opportunities in alignment with environmental sustainability goals.\n\nThis regulation emphasizes the involvement of local communities and customary groups in forest management, ensuring they have recognized rights, access, and responsibilities. It promotes fair distribution of benefits derived from forest resources and safeguards social inclusion, empowerment, and equitable participation. By formalizing community roles in managing forest areas, the regulation supports social justice and benefit-sharing mechanisms.", "Link": "https://peraturan.bpk.go.id/Details/253766/permen-lhk-no-4-tahun-2023", "degree": "5", "size": "6", "betweenness": "0.00042016806722689073", "closeness": "0.08529411764705884", "eigenvector": "0.0028982284046537576", "indegree": "2", "outdegree": "3", "reach": "0.05813953488372093", "micmac_exposure": "0.3004772424351717", "micmac_influence": "0.01995856992248625"}, {"Label": "PMLHK 15-2021", "General Focus": "Governance & Policy", "Category": "Ministry of Environment and Forestry Organization and Work Procedures", "Regulation Type": "Ministerial Regulation", "Description": "Regulation No. 15 of 2021 by the Minister of Environment and Forestry on the Organization and Work Procedures of the Ministry of Environment and Forestry.\n\nThe regulation is critical for coordinated mangrove ecosystem planning, zoning, conservation, and restoration efforts. By accelerating the One Map Policy, it lays the foundation for better ecosystem management through comprehensive and reliable geospatial data", "Link": "https://peraturan.bpk.go.id/Details/235337/permen-lhk-no-15-tahun-2021", "degree": "8", "size": "9", "betweenness": "0", "closeness": "0.1784313725490196", "eigenvector": "0", "indegree": "0", "outdegree": "8", "reach": "0.22093023255813954", "micmac_exposure": "0", "micmac_influence": "0.10445590458553632"}, {"Label": "PMLHK 24-2021", "General Focus": "Planning & Data", "Category": "Environmental Geospatial Data", "Regulation Type": "Ministerial Regulation", "Description": "Regulation of the Minister of Environment and Forestry of the Republic of Indonesia Number 24 of 2021 Concerning Procedures for Organizing Thematic Geospatial Information within the Ministry of Environment and Forestry\n\nThis regulation regulates on how geospatial information is organized and managed within the Ministry, including data and maps related to forests, land cover, and coastal ecosystems. For mangroves, this regulation mainly relates to mapping and monitoring their extent, condition, and spatial distribution. It ensures that mangrove areas are properly documented in thematic geospatial databases, which then become the basis for planning conservation, rehabilitation, and sustainable use efforts", "Link": "https://peraturan.bpk.go.id/Details/235352/permen-lhk-no-24-tahun-2021", "degree": "12", "size": "12", "betweenness": "0.002696078431372549", "closeness": "0.07941176470588236", "eigenvector": "0.02898228404653758", "indegree": "10", "outdegree": "2", "reach": "0.046511627906976744", "micmac_exposure": "0.15647041830086694", "micmac_influence": "0.030413214398404144"}, {"Label": "UU 23-2014", "General Focus": "Governance & Policy", "Category": "Sub-National Governance", "Regulation Type": "Law", "Description": "AMENDED", "Link": "https://peraturan.bpk.go.id/Details/38685/uu-no-23-tahun-2014", "degree": "4", "size": "5", "betweenness": "0", "closeness": "0.10775910364145656", "eigenvector": "0", "indegree": "0", "outdegree": "4", "reach": "0.10465116279069768", "micmac_exposure": "0", "micmac_influence": "0.010454644475917894"}, {"Label": "PMLHK 7-2021", "General Focus": "Conservation & Nature", "Category": "Licensing in environment and forestry sectors", "Regulation Type": "Ministerial Regulation", "Description": "Regulation of the Minister of Environment and Forestry Number 7 of 2021 concerning Forestry Planning, Change of Designation and Function of Forest Areas, and Use of Forest Areas\n\nThis regulation establishes systematic approaches for designating and managing forest areas. It creates frameworks for identifying and categorizing forest areas, including mangroves. It supports conservation, protection, restoration, and production activities. It provides procedures for converting or redesignating forest areas and enables the restoration of degraded areas to their original forest or mangrove status. It supports different types of land governance (state-owned, permits, etc.). It regulates the sustainable use of forest resources. It establishes guidelines for forest management activities. It supports integrated forest management practices", "Link": "https://peraturan.bpk.go.id/Details/235244/permen-lhk-no-7-tahun-2021", "degree": "9", "size": "10", "betweenness": "0.0056255835667600425", "closeness": "0.06978991596638656", "eigenvector": "0.021439985959059778", "indegree": "7", "outdegree": "2", "reach": "0.06976744186046512", "micmac_exposure": "0.18077605464428229", "micmac_influence": "0.012079570822191429"}, {"Label": "PMLHK 21-2022", "General Focus": "Climate & Carbon", "Category": "NEK Technical Guidelines", "Regulation Type": "Ministerial Regulation", "Description": "Regulation of the Minister of Environment and Forestry Number 21 of 2022 concerning Procedures for the Application of Carbon Economic Value\n\nIn relation to standardized and certified ecosystem services, this regulation requires that carbon-related activities, including those from mangrove ecosystems, be measured, reported, and verified under national standards to ensure credibility and market acceptance. \n\nAt the same time, it connects to broader ecosystem services by recognizing not only carbon sequestration but also the co-benefits of mangroves such as biodiversity protection, coastal resilience, and livelihoods, thereby embedding them into a certified economic value system.", "Link": "https://peraturan.bpk.go.id/Details/235421/permen-lhk-no-21-tahun-2022", "degree": "13", "size": "13", "betweenness": "0.003583099906629318", "closeness": "0.15627450980392155", "eigenvector": "0.011819589193680253", "indegree": "2", "outdegree": "11", "reach": "0.1744186046511628", "micmac_exposure": "0.42379050226161963", "micmac_influence": "0.057529268246721096"}];
+
+
+
+
+const rawConnections = [{"From": "UU 6-2023", "To": "UU 4-2011", "Direction": "undirected"}, {"From": "UU 41-1999", "To": "KMHUT 594-2025", "Direction": "directed"}, {"From": "PMLHK 7-2021", "To": "KMLHK 1027-2023", "Direction": "directed"}, {"From": "POJK 14-2023", "To": "Kep-00148/BEI/09-2024", "Direction": "directed"}, {"From": "UU 32-2009", "To": "PMLHK 24-2021", "Direction": "directed"}, {"From": "UU 5-1990", "To": "PMLHK 7-2021", "Direction": "directed"}, {"From": "UU 17-2007", "To": "PPRES 98-2021", "Direction": "directed"}, {"From": "PP 46-2017", "To": "PP 77-2018", "Direction": "directed"}, {"From": "PMHUT 1-2024", "To": "KMHUT 594-2025", "Direction": "directed"}, {"From": "PP 28-2011", "To": "KMLHK  716-2023", "Direction": "undirected"}, {"From": "UU 32-2009", "To": "PMK 137/PMK.01/2019", "Direction": "directed"}, {"From": "PP 21-2021", "To": "PMATR 13-2021", "Direction": "directed"}, {"From": "UU 41-1999", "To": "PMLHK 71-2017", "Direction": "directed"}, {"From": "PP 23-2021", "To": "KMLHK 168-2022", "Direction": "directed"}, {"From": "UU 6-2023", "To": "PMLHK 24-2021", "Direction": "directed"}, {"From": "UU 32-2009", "To": "PP 46-2017", "Direction": "directed"}, {"From": "UU 16-2016", "To": "PMLHK 71-2017", "Direction": "directed"}, {"From": "PP 21-2021", "To": "PMKP 28-2021", "Direction": "directed"}, {"From": "UU 5-1990", "To": "PP 108-2015", "Direction": "directed"}, {"From": "PP 21-2021", "To": "KDPJPRL 41-2021", "Direction": "directed"}, {"From": "PMLHK 15-2021", "To": "PMLHK 10-2022", "Direction": "directed"}, {"From": "PMLHK 21-2022", "To": "KMLHK 1027-2023", "Direction": "directed"}, {"From": "UU 4-2023", "To": "POJK 14-2023", "Direction": "directed"}, {"From": "PP 77-2018", "To": "PMK 137/PMK.01/2019", "Direction": "directed"}, {"From": "UU 32-2009", "To": "PDKSDAE 4/2-2021", "Direction": "directed"}, {"From": "PMLHK 15-2021", "To": "PMLHK 7-2021", "Direction": "directed"}, {"From": "PMLHK 15-2021", "To": "PMLHK 21-2022", "Direction": "directed"}, {"From": "PMLHK 10-2022", "To": "KMHUT 594-2025", "Direction": "directed"}, {"From": "UU 32-2009", "To": "PMLHK 73-2017", "Direction": "directed"}, {"From": "PMLHK 21-2022", "To": "KMLHK  716-2023", "Direction": "directed"}, {"From": "UU 23-2014", "To": "PMLHK 74-2016", "Direction": "directed"}, {"From": "UU 6-2023", "To": "PMLHK 24-2021", "Direction": "directed"}, {"From": "PP 108-2015", "To": "PP 28-2011", "Direction": "undirected"}, {"From": "PP 28-2011", "To": "PDKSDAE 4/2-2021", "Direction": "directed"}, {"From": "PMLHK 15-2021", "To": "PMLHK 27-2021", "Direction": "directed"}, {"From": "PPRES 98-2021", "To": "KMLHK 168-2022", "Direction": "directed"}, {"From": "PMKP 2-2025", "To": "PMKP 1-2025", "Direction": "directed"}, {"From": "PP 46-2017", "To": "PMLHK 71-2017", "Direction": "directed"}, {"From": "UU 32-2009", "To": "PMK 124/PMK.05/2020", "Direction": "directed"}, {"From": "PMK 137/PMK.01/2019", "To": "PMK 180/PMK.05/2022", "Direction": "directed"}, {"From": "UU 16-2016", "To": "PPRES 98-2021", "Direction": "directed"}, {"From": "PPRES 27-2014", "To": "PMLHK 24-2021", "Direction": "directed"}, {"From": "UU 16-2016", "To": "PMLHK 73-2017", "Direction": "directed"}, {"From": "UU 10-2009", "To": "PPres 56-2019", "Direction": "directed"}, {"From": "UU 41-1999", "To": "PMK 124/PMK.05/2020", "Direction": "directed"}, {"From": "PPRES 23-2021", "To": "KMHUT 594-2025", "Direction": "directed"}, {"From": "UU 4-2011", "To": "PPRES 27-2014", "Direction": "directed"}, {"From": "PP 45-2021", "To": "PMLHK 24-2021", "Direction": "directed"}, {"From": "PMLHK 15-2021", "To": "PMLHK 7-2023", "Direction": "directed"}, {"From": "PPRES 98-2021", "To": "POJK 14-2023", "Direction": "directed"}, {"From": "UU 1-2014", "To": "KDPJPRL 41-2021", "Direction": "directed"}, {"From": "UU 1-2014", "To": "PPres 56-2019", "Direction": "directed"}, {"From": "UU 32-2009", "To": "PP 27-2025", "Direction": "directed"}, {"From": "UU 45-2009", "To": "PPres 56-2019", "Direction": "directed"}, {"From": "UU 32-2009", "To": "PMLH 15-2012", "Direction": "directed"}, {"From": "PMLHK 15-2021", "To": "KMLHK 168-2022", "Direction": "directed"}, {"From": "UU 41-1999", "To": "PMLHK 7-2021", "Direction": "directed"}, {"From": "UU 32-2009", "To": "PMLHK 27-2021", "Direction": "directed"}, {"From": "UU 6-2023", "To": "UU 45-2009", "Direction": "undirected"}, {"From": "PMLHK 23-2021", "To": "PMLHK 7-2023", "Direction": "directed"}, {"From": "UU 32-2009", "To": "PPres 56-2019", "Direction": "directed"}, {"From": "PMLHK 23-2021", "To": "PMK 216/PMK.07/2021", "Direction": "directed"}, {"From": "PP 26-2020", "To": "PMLHK 10-2022", "Direction": "directed"}, {"From": "UU 41-1999", "To": "PMLHK 73-2017", "Direction": "directed"}, {"From": "PP 27-2025", "To": "PMLH 26-2025", "Direction": "directed"}, {"From": "UU 27-2007", "To": "PPRES 121-2012", "Direction": "directed"}, {"From": "UU 6-2023", "To": "UU 10-2009", "Direction": "undirected"}, {"From": "UU 41-1999", "To": "PMLHK 105-2018", "Direction": "directed"}, {"From": "UU 9-2015", "To": "PDKSDAE 4/2-2021", "Direction": "directed"}, {"From": "UU 6-2023", "To": "UU 1-2014", "Direction": "undirected"}, {"From": "PP 28-2011", "To": "PPres 56-2019", "Direction": "directed"}, {"From": "KPres 32-1990", "To": "PDKSDAE 4/2-2021", "Direction": "directed"}, {"From": "UU 41-1999", "To": "KMLHK  716-2023", "Direction": "undirected"}, {"From": "PMLHK 23-2021", "To": "PMLHK 9-2021", "Direction": "undirected"}, {"From": "UU 32-2009", "To": "PMK 180/PMK.05/2022", "Direction": "directed"}, {"From": "PMLHK 21-2022", "To": "PMLHK 7-2023", "Direction": "directed"}, {"From": "UU 23-2014", "To": "PMLHK 105-2018", "Direction": "directed"}, {"From": "PP 21-2021", "To": "PMATR 12-2021", "Direction": "directed"}, {"From": "UU 41-1999", "To": "PDKSDAE 4/2-2021", "Direction": "directed"}, {"From": "PMLHK 74-2016", "To": "PDKSDAE 4/2-2021", "Direction": "directed"}, {"From": "PP 46-2017", "To": "PPRES 98-2021", "Direction": "directed"}, {"From": "PMLHK 21-2022", "To": "PMLHK 7-2021", "Direction": "directed"}, {"From": "PPRES 98-2021", "To": "PMKP 1-2025", "Direction": "directed"}, {"From": "UU 32-2009", "To": "PMLHK 72-2017", "Direction": "directed"}, {"From": "PPRES 98-2021", "To": "PMLHK 7-2021", "Direction": "directed"}, {"From": "UU 41-1999", "To": "KMLHK 168-2022", "Direction": "directed"}, {"From": "PMLHK 23-2021", "To": "PMLHK 4-2023", "Direction": "directed"}, {"From": "PMLHK 8-2021", "To": "PMLHK 11-2022", "Direction": "directed"}, {"From": "PP 46-2017", "To": "PMLH 2-2025", "Direction": "directed"}, {"From": "PP 46-2017", "To": "PMK 124/PMK.05/2020", "Direction": "directed"}, {"From": "UU 1-2014", "To": "PP 21-2021", "Direction": "directed"}, {"From": "PP 23-2021", "To": "PMLHK 24-2021", "Direction": "directed"}, {"From": "UU 4-2011", "To": "KDPJPRL 41-2021", "Direction": "directed"}, {"From": "PPRES 175-2024", "To": "PMLHK 7-2021", "Direction": "directed"}, {"From": "PP 77-2018", "To": "PMK 180/PMK.05/2022", "Direction": "directed"}, {"From": "UU 32-2009", "To": "PMLHK 71-2017", "Direction": "directed"}, {"From": "PP 21-2021", "To": "PMATR 11-2021", "Direction": "directed"}, {"From": "UU 41-1999", "To": "PP 26-2020", "Direction": "directed"}, {"From": "UU 27-2007", "To": "PPRES 51-2016", "Direction": "directed"}, {"From": "UU 23-2014", "To": "PMLHK 73-2017", "Direction": "directed"}, {"From": "PMLHK 9-2021", "To": "PMLHK 4-2023", "Direction": "directed"}, {"From": "UU 4-2011", "To": "KMHUT 594-2025", "Direction": "directed"}, {"From": "PP 26-2020", "To": "PMLHK 10-2021", "Direction": "directed"}, {"From": "UU 41-1999", "To": "PMLHK 74-2016", "Direction": "directed"}, {"From": "PP 21-2021", "To": "PMATR 14-2021", "Direction": "directed"}, {"From": "UU 16-2016", "To": "KMLHK 168-2022", "Direction": "undirected"}, {"From": "UU 32-2009", "To": "PMLHK 105-2018", "Direction": "directed"}, {"From": "UU 4-2011", "To": "PP 45-2021", "Direction": "directed"}, {"From": "PMLHK 21-2022", "To": "POJK 14-2023", "Direction": "directed"}, {"From": "UU 5-1990", "To": "PDKSDAE 4/2-2021", "Direction": "directed"}, {"From": "PP 74-2012", "To": "PP 77-2018", "Direction": "directed"}, {"From": "UU 32-2009", "To": "PMLHK 74-2016", "Direction": "directed"}, {"From": "UU 6-2023", "To": "UU 41-1999", "Direction": "undirected"}, {"From": "UU 41-1999", "To": "PMLHK 8-2021", "Direction": "directed"}, {"From": "PP 77-2018", "To": "PMK 124/PMK.05/2020", "Direction": "directed"}, {"From": "PMLHK 15-2021", "To": "PMLHK 24-2021", "Direction": "directed"}, {"From": "PPRES 175-2024", "To": "KMHUT 594-2025", "Direction": "directed"}, {"From": "UU 9-2015", "To": "PPRES 98-2021", "Direction": "directed"}, {"From": "POJK 14-2023", "To": "Kep-00296/BEI/09-2023", "Direction": "directed"}, {"From": "PP 23-2021", "To": "PMLHK 7-2021", "Direction": "directed"}, {"From": "PP 26-2020", "To": "KMHUT 594-2025", "Direction": "directed"}, {"From": "PMLHK 21-2022", "To": "PMKP 1-2025", "Direction": "directed"}, {"From": "POJK 14-2023", "To": "Kep-00298/BEI/09-2023", "Direction": "directed"}, {"From": "PMLHK 15-2021", "To": "PMLHK 11-2022", "Direction": "directed"}, {"From": "PPRES 39-2019", "To": "PMLHK 24-2021", "Direction": "directed"}, {"From": "PPRES 98-2021", "To": "KMLHK 1027-2023", "Direction": "directed"}, {"From": "UU 4-2011", "To": "PMLHK 24-2021", "Direction": "directed"}, {"From": "PP 60-2007", "To": "PPres 56-2019", "Direction": "directed"}, {"From": "PPRES 98-2021", "To": "PMLHK 7-2023", "Direction": "directed"}, {"From": "UU 5-1990", "To": "PPres 56-2019", "Direction": "directed"}, {"From": "PP 45-2021", "To": "KDPJPRL 41-2021", "Direction": "directed"}, {"From": "PP 26-2020", "To": "PMLHK 23-2021", "Direction": "directed"}, {"From": "UU 41-1999", "To": "PMLHK 9-2021", "Direction": "directed"}, {"From": "KMLHK 168-2022", "To": "KMLHK  716-2023", "Direction": "directed"}, {"From": "UU 32-2009", "To": "PP 77-2018", "Direction": "directed"}, {"From": "PPRES 98-2021", "To": "PMLHK 21-2022", "Direction": "directed"}, {"From": "PMLHK 24-2021", "To": "KMHUT 594-2025", "Direction": "directed"}, {"From": "UU 32-2024", "To": "UU 5-1990", "Direction": "undirected"}, {"From": "UU 6-2023", "To": "PP 21-2021", "Direction": "directed"}, {"From": "UU 41-1999", "To": "PMLHK 72-2017", "Direction": "directed"}, {"From": "UU 41-1999", "To": "PP 23-2021", "Direction": "directed"}, {"From": "PPRES 23-2021", "To": "PMLHK 24-2021", "Direction": "directed"}, {"From": "PMLHK 7-2021", "To": "KMLHK  716-2023", "Direction": "directed"}, {"From": "UU 41-1999", "To": "PMK 137/PMK.01/2019", "Direction": "directed"}, {"From": "PP 46-2017", "To": "PMK 137/PMK.01/2019", "Direction": "directed"}, {"From": "PP 23-2021", "To": "PMLHK 8-2021", "Direction": "directed"}, {"From": "UU 6-2023", "To": "KMHUT 594-2025", "Direction": "directed"}, {"From": "UU 16-2016", "To": "PMLHK 72-2017", "Direction": "directed"}, {"From": "UU 32-2009", "To": "KMLHK  716-2023", "Direction": "undirected"}];
+
+// ─── COLORS ─────────────────────────────────────────────────────────────────
+const FOCUS_COLORS = {
+  "Climate & Carbon": "#00c98b",
+  "Conservation & Nature": "#4fc3f7",
+  "Governance & Policy": "#a78bfa",
+  "Planning & Data": "#f59e0b",
+  "Finance & Markets": "#fb923c",
+  "Social & Community": "#f472b6",
+  "Other": "#94a3b8"
+};
+
+// ─── REGULATION TYPE COLORS ───────────────────────────────────────────────────
+const REG_TYPE_COLORS = {
+  "Law": "#e53e3e",
+  "Government Regulation": "#dd6b20",
+  "President Regulation": "#d69e2e",
+  "Presidential Decree": "#b7791f",
+  "Ministerial Regulation": "#38a169",
+  "Ministerial Decree": "#2b6cb0",
+  "Decree of the Board of Directors": "#805ad5",
+  "Financial Services Authority Regulation": "#d53f8c",
+  "Directorate Regulation": "#0891b2",
+  "National Standardization Body Regulation": "#718096"
+};
+
+function getFocusColor(focus) {
+  return FOCUS_COLORS[focus] || FOCUS_COLORS["Other"];
+}
+
+function getRegTypeColor(regType) {
+  return REG_TYPE_COLORS[regType] || '#718096';
+}
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let activeFilters = new Set(Object.keys(FOCUS_COLORS));
+let activeTypes = new Set(Object.keys(REG_TYPE_COLORS));
+let searchQuery = '';
+let selectedNode = null;
+let layoutMode = 'force';
+let sizeMetric = 'degree';
+let simulation;
+let zoomBehavior;
+let allNodes = [], allLinks = [];
+let nodeMap = {};
+let nodeColorMap = {}; // global for edge coloring
+
+// Build index
+rawElements.forEach(e => { nodeMap[e.Label.trim()] = e; });
+
+// ─── BUILD GRAPH DATA ────────────────────────────────────────────────────────
+allNodes = rawElements.map((el, i) => ({
+  id: el.Label.trim(),
+  label: el.Label.trim(),
+  focus: el["General Focus"] || "Other",
+  category: el.Category,
+  regType: el["Regulation Type"],
+  description: el.Description,
+  link: el.Link,
+  degree: parseInt(el.degree) || 0,
+  indegree: parseInt(el.indegree) || 0,
+  outdegree: parseInt(el.outdegree) || 0,
+  reach: parseFloat(el.reach) || 0,
+  micmac_exposure: parseFloat(el.micmac_exposure) || 0,
+  micmac_influence: parseFloat(el.micmac_influence) || 0,
+  size: 8, // placeholder, computed below
+  color: getRegTypeColor(el["Regulation Type"]),
+  focusColor: getFocusColor(el["General Focus"]),
+  betweenness: parseFloat(el.betweenness) || 0,
+  closeness: parseFloat(el.closeness) || 0,
+  eigenvector: parseFloat(el.eigenvector) || 0,
+  x: undefined, y: undefined
+}));
+
+// Compute initial sizes based on degree
+allNodes.forEach(n => { n.size = computeNodeSize(n, 'degree'); });
+
+allLinks = rawConnections.map(c => ({
+  source: c.From.trim(),
+  target: c.To.trim(),
+  direction: c.Direction
+})).filter(l => nodeMap[l.source] && nodeMap[l.target]);
+
+// ─── BUILD SIDEBAR FILTERS ───────────────────────────────────────────────────
+function buildFilters() {
+  // Focus filters
+  const fc = document.getElementById('focusFilters');
+  Object.entries(FOCUS_COLORS).forEach(([name, color]) => {
+    const count = allNodes.filter(n => n.focus === name).length;
+    if (!count) return;
+    const chip = document.createElement('div');
+    chip.className = 'filter-chip active';
+    chip.dataset.focus = name;
+    chip.style.background = color + '18';
+    chip.style.borderColor = color + '60';
+    chip.style.color = color;
+    chip.innerHTML = `<span class="dot" style="background:${color}"></span>${name} <span style="opacity:0.6">(${count})</span>`;
+    chip.onclick = () => toggleFocusFilter(name, chip, color);
+    fc.appendChild(chip);
+  });
+
+  // Type filters
+  const tc = document.getElementById('typeFilters');
+  const types = [...new Set(allNodes.map(n => n.regType).filter(Boolean))].sort();
+  types.forEach(type => {
+    const count = allNodes.filter(n => n.regType === type).length;
+    const item = document.createElement('div');
+    item.className = 'type-item active';
+    item.dataset.type = type;
+    item.innerHTML = `<span class="type-left"><span class="type-name" style="font-size:11px">${type}</span></span><span class="type-count">${count}</span>`;
+    item.onclick = () => toggleTypeFilter(type, item);
+    tc.appendChild(item);
+  });
+}
+
+function toggleFocusFilter(name, chip, color) {
+  if (activeFilters.has(name)) {
+    activeFilters.delete(name);
+    chip.className = 'filter-chip inactive';
+  } else {
+    activeFilters.add(name);
+    chip.className = 'filter-chip active';
+  }
+  updateVisibility();
+}
+
+function toggleTypeFilter(type, item) {
+  if (activeTypes.has(type)) {
+    activeTypes.delete(type);
+    item.classList.remove('active');
+  } else {
+    activeTypes.add(type);
+    item.classList.add('active');
+  }
+  updateVisibility();
+}
+
+// ─── LEGEND ─────────────────────────────────────────────────────────────────
+function buildLegend() {
+  document.querySelector('.legend h4').textContent = 'Regulation Type';
+  const li = document.getElementById('legendItems');
+  li.innerHTML = '';
+  Object.entries(REG_TYPE_COLORS).forEach(([name, color]) => {
+    const count = allNodes.filter(n => n.regType === name).length;
+    if (!count) return;
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `<span class="legend-dot" style="background:${color}"></span><span>${name}</span><span style="color:var(--muted);font-size:10px;margin-left:4px">(${count})</span>`;
+    li.appendChild(item);
+  });
+}
+
+// ─── NODE LIST ───────────────────────────────────────────────────────────────
+function buildNodeList(nodes) {
+  const list = document.getElementById('nodeList');
+  const countEl = document.getElementById('nodeCount');
+  list.innerHTML = '';
+  countEl.textContent = nodes.length;
+  if (!nodes.length) {
+    list.innerHTML = '<div class="no-results">No regulations found</div>';
+    return;
+  }
+  nodes.forEach(n => {
+    const card = document.createElement('div');
+    card.className = 'node-card' + (selectedNode && selectedNode.id === n.id ? ' highlighted' : '');
+    card.dataset.id = n.id;
+    const color = n.color;
+    card.innerHTML = `
+      <div class="node-card-label">${n.label}</div>
+      <div class="node-card-meta">
+        <span class="node-focus-badge" style="background:${n.color}22;color:${n.color};border:1px solid ${n.color}44">${n.regType || ''}</span>
+        <span style="color:var(--muted)">${n.focus}</span>
+      </div>`;
+    card.onclick = () => selectNode(n.id);
+    list.appendChild(card);
+  });
+}
+
+// ─── D3 GRAPH ────────────────────────────────────────────────────────────────
+const svg = d3.select('#mainSvg');
+let gContainer;
+let linkSel, nodeSel;
+
+function initGraph() {
+  const el = document.getElementById('graphArea');
+  const W = el.clientWidth, H = el.clientHeight;
+
+  svg.selectAll('*:not(defs)').remove();
+  gContainer = svg.append('g').attr('id', 'gContainer');
+
+  zoomBehavior = d3.zoom()
+    .scaleExtent([0.1, 5])
+    .on('zoom', e => gContainer.attr('transform', e.transform));
+  svg.call(zoomBehavior);
+  svg.on('click', (e) => { if (e.target === svg.node()) deselectNode(); });
+
+  // Build nodeColor lookup for edge coloring (global)
+  allNodes.forEach(n => { nodeColorMap[n.id] = n.color; });
+
+  // links
+  linkSel = gContainer.append('g').attr('class', 'links')
+    .selectAll('line')
+    .data(allLinks)
+    .enter().append('line')
+    .attr('class', d => 'edge ' + d.direction)
+    .attr('stroke', d => {
+      const sId = typeof d.source === 'object' ? d.source.id : d.source;
+      return (nodeColorMap[sId] || '#94a3b8') + '70';
+    })
+    .attr('stroke-width', 1);
+
+  // nodes
+  const nodeGroups = gContainer.append('g').attr('class', 'nodes')
+    .selectAll('g')
+    .data(allNodes)
+    .enter().append('g')
+    .attr('class', 'node-group')
+    .attr('data-id', d => d.id)
+    .style('cursor', 'pointer')
+    .call(d3.drag()
+      .on('start', dragStarted)
+      .on('drag', dragged)
+      .on('end', dragEnded))
+    .on('click', (e, d) => { e.stopPropagation(); selectNode(d.id); })
+    .on('mouseover', showTooltip)
+    .on('mousemove', moveTooltip)
+    .on('mouseout', hideTooltip);
+
+  nodeGroups.append('circle')
+    .attr('class', 'node-circle')
+    .attr('r', d => d.size)
+    .attr('fill', d => d.color + 'cc')
+    .attr('stroke', d => d.color)
+    .attr('stroke-width', 1.5);
+
+  nodeGroups.append('text')
+    .attr('class', 'node-label')
+    .attr('dy', d => d.size + 10)
+    .attr('text-anchor', 'middle')
+    .attr('fill', '#334155')
+    .attr('font-size', '9px')
+    .text(d => d.label.length > 18 ? d.label.slice(0,16)+'…' : d.label);
+
+  nodeSel = nodeGroups;
+
+  // Pre-position isolated nodes in a ring at the periphery
+  const isolatedNodes = allNodes.filter(n => n.degree === 0);
+  const connectedNodes = allNodes.filter(n => n.degree > 0);
+  const peripheryR = Math.min(W, H) * 0.42;
+  const peripheryAngleStart = Math.PI * 0.55; // bottom-right arc
+  const peripheryAngleSpan = Math.PI * 1.1;
+  isolatedNodes.forEach((n, i) => {
+    const angle = peripheryAngleStart + (i / Math.max(isolatedNodes.length - 1, 1)) * peripheryAngleSpan;
+    n.x = W/2 + Math.cos(angle) * peripheryR;
+    n.y = H/2 + Math.sin(angle) * peripheryR;
+  });
+
+  simulation = d3.forceSimulation(allNodes)
+    .force('link', d3.forceLink(allLinks).id(d => d.id).distance(d => {
+      return 55 + (d.source.degree + d.target.degree) * 1.5;
+    }).strength(0.7))
+    .force('charge', d3.forceManyBody().strength(d => {
+      // Isolated nodes repel weakly so they cluster near periphery
+      return d.degree === 0 ? -25 : -160;
+    }))
+    .force('center', d3.forceCenter(W/2, H/2).strength(0.04))
+    .force('collide', d3.forceCollide(d => d.size + 10))
+    // Connected nodes: mild pull to center
+    .force('x', d3.forceX(W/2).strength(d => d.degree === 0 ? 0 : 0.025))
+    .force('y', d3.forceY(H/2).strength(d => d.degree === 0 ? 0 : 0.025))
+    // Isolated nodes: strong pull to their periphery target position
+    .force('periphery', (alpha) => {
+      isolatedNodes.forEach((n, i) => {
+        const angle = peripheryAngleStart + (i / Math.max(isolatedNodes.length - 1, 1)) * peripheryAngleSpan;
+        const tx = W/2 + Math.cos(angle) * peripheryR;
+        const ty = H/2 + Math.sin(angle) * peripheryR;
+        n.vx += (tx - n.x) * 0.12 * alpha;
+        n.vy += (ty - n.y) * 0.12 * alpha;
+      });
+    })
+    .on('tick', ticked);
+
+  fitView();
+}
+
+function ticked() {
+  linkSel
+    .attr('x1', d => d.source.x)
+    .attr('y1', d => d.source.y)
+    .attr('x2', d => d.target.x)
+    .attr('y2', d => d.target.y);
+  nodeSel.attr('transform', d => `translate(${d.x},${d.y})`);
+}
+
+function dragStarted(e, d) {
+  if (!e.active) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x; d.fy = d.y;
+}
+function dragged(e, d) { d.fx = e.x; d.fy = e.y; }
+function dragEnded(e, d) {
+  if (!e.active) simulation.alphaTarget(0);
+  d.fx = null; d.fy = null;
+}
+
+// ─── VISIBILITY ─────────────────────────────────────────────────────────────
+function getVisibleNodes() {
+  return allNodes.filter(n => {
+    const focusOk = activeFilters.has(n.focus) || (n.focus === null && activeFilters.has("Other"));
+    const typeOk = !n.regType || activeTypes.has(n.regType);
+    const searchOk = !searchQuery || n.label.toLowerCase().includes(searchQuery.toLowerCase()) || (n.category && n.category.toLowerCase().includes(searchQuery.toLowerCase()));
+    return focusOk && typeOk && searchOk;
+  });
+}
+
+function updateVisibility() {
+  const visibleIds = new Set(getVisibleNodes().map(n => n.id));
+  
+  nodeSel.style('opacity', d => visibleIds.has(d.id) ? 1 : 0.07)
+    .style('pointer-events', d => visibleIds.has(d.id) ? 'all' : 'none');
+
+  linkSel.style('opacity', d => {
+    const sId = typeof d.source === 'object' ? d.source.id : d.source;
+    const tId = typeof d.target === 'object' ? d.target.id : d.target;
+    return visibleIds.has(sId) && visibleIds.has(tId) ? 0.7 : 0.03;
+  });
+
+  buildNodeList(getVisibleNodes());
+}
+
+function filterNodes(q) {
+  searchQuery = q;
+  updateVisibility();
+}
+
+// ─── SELECTION ───────────────────────────────────────────────────────────────
+function selectNode(id) {
+  selectedNode = allNodes.find(n => n.id === id);
+  if (!selectedNode) return;
+
+  // Highlight connected
+  const connectedIds = new Set([id]);
+  allLinks.forEach(l => {
+    const sId = typeof l.source === 'object' ? l.source.id : l.source;
+    const tId = typeof l.target === 'object' ? l.target.id : l.target;
+    if (sId === id) connectedIds.add(tId);
+    if (tId === id) connectedIds.add(sId);
+  });
+
+  nodeSel.style('opacity', d => connectedIds.has(d.id) ? 1 : 0.12);
+  linkSel.style('opacity', d => {
+    const sId = typeof d.source === 'object' ? d.source.id : d.source;
+    const tId = typeof d.target === 'object' ? d.target.id : d.target;
+    return (sId === id || tId === id) ? 1 : 0.04;
+  }).attr('stroke', d => {
+    const sId = typeof d.source === 'object' ? d.source.id : d.source;
+    const tId = typeof d.target === 'object' ? d.target.id : d.target;
+    if (sId === id || tId === id) {
+      return nodeColorMap[sId] || '#0891b2';
+    }
+    return (nodeColorMap[sId] || '#94a3b8') + '40';
+  }).attr('stroke-width', d => {
+    const sId = typeof d.source === 'object' ? d.source.id : d.source;
+    const tId = typeof d.target === 'object' ? d.target.id : d.target;
+    return (sId === id || tId === id) ? 2.5 : 1;
+  });
+
+  showDetailPanel(selectedNode, connectedIds);
+  
+  // Update node list
+  document.querySelectorAll('.node-card').forEach(card => {
+    card.classList.toggle('highlighted', card.dataset.id === id);
+  });
+
+  // Update reg panel highlight
+  updateRegPanelHighlight(id);
+}
+
+function deselectNode() {
+  selectedNode = null;
+  updateVisibility();
+  linkSel
+    .attr('stroke', d => {
+      const sId = typeof d.source === 'object' ? d.source.id : d.source;
+      return (nodeColorMap[sId] || '#94a3b8') + '70';
+    })
+    .attr('stroke-width', 1);
+  closeDetail();
+  document.querySelectorAll('.node-card').forEach(c => c.classList.remove('highlighted'));
+  document.querySelectorAll('.reg-item').forEach(c => c.classList.remove('active'));
+}
+
+function showDetailPanel(node, connectedIds) {
+  const panel = document.getElementById('detailPanel');
+  const body = document.getElementById('detailBody');
+  panel.classList.remove('hidden');
+
+  const connections = allLinks.filter(l => {
+    const sId = typeof l.source === 'object' ? l.source.id : l.source;
+    const tId = typeof l.target === 'object' ? l.target.id : l.target;
+    return sId === node.id || tId === node.id;
+  });
+
+  const outgoing = connections.filter(l => {
+    const sId = typeof l.source === 'object' ? l.source.id : l.source;
+    return sId === node.id;
+  });
+  const incoming = connections.filter(l => {
+    const tId = typeof l.target === 'object' ? l.target.id : l.target;
+    return tId === node.id;
+  });
+
+  const color = node.color;
+
+  body.innerHTML = `
+    <div class="detail-label">${node.label}</div>
+    <div class="detail-type-badge" style="background:${node.color}22;color:${node.color};border-color:${node.color}44">${node.regType || 'Regulation'}</div>
+    
+    ${node.category ? `
+    <div class="detail-section">
+      <h4>Category</h4>
+      <span class="detail-cat">${node.category}</span>
+    </div>` : ''}
+
+    ${node.description ? `
+    <div class="detail-section">
+      <h4>Description</h4>
+      <p class="detail-desc">${node.description.split('\n')[0]}</p>
+    </div>` : ''}
+
+    <div class="detail-section">
+      <h4>Network Metrics</h4>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="m-label">Degree</div>
+          <div class="m-val">${node.degree}</div>
+        </div>
+        <div class="metric-card">
+          <div class="m-label">Betweenness</div>
+          <div class="m-val">${fmtMetric(node.betweenness)}</div>
+        </div>
+        <div class="metric-card">
+          <div class="m-label">Closeness</div>
+          <div class="m-val">${fmtMetric(node.closeness)}</div>
+        </div>
+        <div class="metric-card">
+          <div class="m-label">Eigenvector</div>
+          <div class="m-val">${fmtMetric(node.eigenvector)}</div>
+        </div>
+        <div class="metric-card">
+          <div class="m-label">Focus Area</div>
+          <div class="m-val" style="font-size:11px;color:${node.focusColor}">${node.focus}</div>
+        </div>
+        <div class="metric-card">
+          <div class="m-label">Out / In</div>
+          <div class="m-val">${outgoing.length} / ${incoming.length}</div>
+        </div>
+        <div class="metric-card">
+          <div class="m-label">Reach</div>
+          <div class="m-val">${fmtMetric(node.reach)}</div>
+        </div>
+        <div class="metric-card">
+          <div class="m-label">MICMAC Exposure</div>
+          <div class="m-val">${fmtMetric(node.micmac_exposure)}</div>
+        </div>
+        <div class="metric-card">
+          <div class="m-label">MICMAC Influence</div>
+          <div class="m-val">${fmtMetric(node.micmac_influence)}</div>
+        </div>
+      </div>
+    </div>
+
+    ${outgoing.length > 0 ? `
+    <div class="detail-section">
+      <h4>References (${outgoing.length})</h4>
+      <ul class="connections-list">
+        ${outgoing.slice(0,8).map(l => {
+          const tId = typeof l.target === 'object' ? l.target.id : l.target;
+          return `<li onclick="selectNode('${tId}')"><span class="conn-arrow">→</span>${tId}</li>`;
+        }).join('')}
+        ${outgoing.length > 8 ? `<li style="color:var(--muted);cursor:default">+${outgoing.length-8} more…</li>` : ''}
+      </ul>
+    </div>` : ''}
+
+    ${incoming.length > 0 ? `
+    <div class="detail-section">
+      <h4>Referenced By (${incoming.length})</h4>
+      <ul class="connections-list">
+        ${incoming.slice(0,8).map(l => {
+          const sId = typeof l.source === 'object' ? l.source.id : l.source;
+          return `<li onclick="selectNode('${sId}')"><span class="conn-arrow">←</span>${sId}</li>`;
+        }).join('')}
+        ${incoming.length > 8 ? `<li style="color:var(--muted);cursor:default">+${incoming.length-8} more…</li>` : ''}
+      </ul>
+    </div>` : ''}
+
+    ${node.link ? `
+    <div class="detail-link">
+      <a href="${node.link}" target="_blank" rel="noopener">
+        🔗 View Official Document
+      </a>
+    </div>` : ''}
+  `;
+}
+
+function closeDetail() {
+  document.getElementById('detailPanel').classList.add('hidden');
+}
+
+// ─── TOOLTIP ─────────────────────────────────────────────────────────────────
+function fmtMetric(v) {
+  if (!v || v === 0) return '—';
+  if (v < 0.001) return v.toExponential(2);
+  return v.toFixed(4).replace(/\.?0+$/, '');
+}
+
+function showTooltip(e, d) {
+  const tt = document.getElementById('tooltip');
+  const desc = d.description ? d.description.split('\n')[0].slice(0,160) + (d.description.length > 160 ? '…' : '') : 'No description available.';
+  tt.innerHTML = `
+    <div class="tt-label">${d.label}</div>
+    <div class="tt-type">${d.regType || ''} · ${d.focus}</div>
+    <div class="tt-desc">${desc}</div>
+    <div class="tt-meta">
+      <div class="tt-meta-item">
+        <div class="tt-meta-label">Degree (in/out)</div>
+        <div class="tt-meta-val">${d.degree} (${d.indegree}/${d.outdegree})</div>
+      </div>
+      <div class="tt-meta-item">
+        <div class="tt-meta-label">Betweenness</div>
+        <div class="tt-meta-val">${fmtMetric(d.betweenness)}</div>
+      </div>
+      <div class="tt-meta-item">
+        <div class="tt-meta-label">Closeness</div>
+        <div class="tt-meta-val">${fmtMetric(d.closeness)}</div>
+      </div>
+      <div class="tt-meta-item">
+        <div class="tt-meta-label">Eigenvector</div>
+        <div class="tt-meta-val">${fmtMetric(d.eigenvector)}</div>
+      </div>
+    </div>
+    ${d.link ? `<div class="tt-link"><a href="${d.link}" target="_blank">🔗 Official Link</a></div>` : ''}
+  `;
+  tt.classList.add('visible');
+  moveTooltip(e);
+}
+
+function moveTooltip(e) {
+  const tt = document.getElementById('tooltip');
+  const ga = document.getElementById('graphArea').getBoundingClientRect();
+  let x = e.clientX - ga.left + 16;
+  let y = e.clientY - ga.top + 16;
+  if (x + 360 > ga.width) x = e.clientX - ga.left - 360;
+  if (y + 260 > ga.height) y = e.clientY - ga.top - 260;
+  tt.style.left = x + 'px';
+  tt.style.top = y + 'px';
+}
+
+function hideTooltip() {
+  document.getElementById('tooltip').classList.remove('visible');
+}
+
+// ─── NODE SIZE BY METRIC ─────────────────────────────────────────────────────
+function computeNodeSize(node, metric) {
+  const MIN = 5, MAX = 24;
+  let vals;
+  if (metric === 'degree') {
+    vals = allNodes.map(n => n.degree);
+    const maxV = Math.max(...vals) || 1;
+    const v = node.degree / maxV;
+    return MIN + v * (MAX - MIN);
+  }
+  if (metric === 'betweenness') {
+    vals = allNodes.map(n => n.betweenness);
+    const maxV = Math.max(...vals) || 1;
+    const v = node.betweenness / maxV;
+    return MIN + Math.pow(v, 0.5) * (MAX - MIN);
+  }
+  if (metric === 'eigenvector') {
+    vals = allNodes.map(n => n.eigenvector);
+    const maxV = Math.max(...vals) || 1;
+    const v = node.eigenvector / maxV;
+    return MIN + Math.pow(v, 0.5) * (MAX - MIN);
+  }
+  if (metric === 'closeness') {
+    vals = allNodes.map(n => n.closeness);
+    const maxV = Math.max(...vals) || 1;
+    const v = node.closeness / maxV;
+    return MIN + Math.pow(v, 0.5) * (MAX - MIN);
+  }
+  if (metric === 'reach') {
+    vals = allNodes.map(n => n.reach);
+    const maxV = Math.max(...vals) || 1;
+    const v = node.reach / maxV;
+    return MIN + Math.pow(v, 0.5) * (MAX - MIN);
+  }
+  if (metric === 'micmac_exp') {
+    vals = allNodes.map(n => n.micmac_exposure);
+    const maxV = Math.max(...vals) || 1;
+    const v = node.micmac_exposure / maxV;
+    return MIN + Math.pow(v, 0.5) * (MAX - MIN);
+  }
+  if (metric === 'micmac_inf') {
+    vals = allNodes.map(n => n.micmac_influence);
+    const maxV = Math.max(...vals) || 1;
+    const v = node.micmac_influence / maxV;
+    return MIN + Math.pow(v, 0.5) * (MAX - MIN);
+  }
+  return MIN + 4;
+}
+
+function setSizeMetric(metric) {
+  sizeMetric = metric;
+  // Update button states
+  document.querySelectorAll('.size-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.metric === metric);
+  });
+  // Recompute sizes on all nodes
+  allNodes.forEach(n => { n.size = computeNodeSize(n, metric); });
+  // Update circles radii and label positions with transition
+  if (nodeSel) {
+    nodeSel.selectAll('circle.node-circle')
+      .transition().duration(450).ease(d3.easeCubicOut)
+      .attr('r', d => d.size);
+    nodeSel.selectAll('text.node-label')
+      .transition().duration(450).ease(d3.easeCubicOut)
+      .attr('dy', d => d.size + 10);
+  }
+  // Update collide force
+  if (simulation) {
+    simulation.force('collide', d3.forceCollide(d => d.size + 10));
+    simulation.alpha(0.3).restart();
+  }
+}
+
+// ─── LAYOUT ─────────────────────────────────────────────────────────────────
+function setLayout(mode) {
+  layoutMode = mode;
+  document.getElementById('btn-force').classList.toggle('active', mode === 'force');
+  document.getElementById('btn-radial').classList.toggle('active', mode === 'radial');
+
+  const el = document.getElementById('graphArea');
+  const W = el.clientWidth, H = el.clientHeight;
+  const cx = W/2, cy = H/2;
+
+  if (mode === 'radial') {
+    simulation.stop();
+    const focuses = [...new Set(allNodes.map(n => n.focus))];
+    allNodes.forEach((n, i) => {
+      const focusIdx = focuses.indexOf(n.focus);
+      const nodesInFocus = allNodes.filter(x => x.focus === n.focus);
+      const posInFocus = nodesInFocus.indexOf(n);
+      const angle = (focusIdx / focuses.length) * Math.PI * 2;
+      const radius = 200 + posInFocus * 18;
+      const spread = (posInFocus / nodesInFocus.length) * 0.8 - 0.4;
+      n.x = cx + Math.cos(angle + spread) * radius;
+      n.y = cy + Math.sin(angle + spread) * radius;
+      n.fx = n.x; n.fy = n.y;
+    });
+    simulation.nodes(allNodes).alpha(0.3).restart();
+    setTimeout(() => {
+      allNodes.forEach(n => { n.fx = null; n.fy = null; });
+    }, 1500);
+  } else {
+    allNodes.forEach(n => { n.fx = null; n.fy = null; });
+    simulation.force('center', d3.forceCenter(cx, cy)).alpha(0.5).restart();
+  }
+}
+
+function resetView() {
+  const el = document.getElementById('graphArea');
+  const W = el.clientWidth, H = el.clientHeight;
+  svg.transition().duration(600)
+    .call(zoomBehavior.transform, d3.zoomIdentity.translate(W/2, H/2).scale(0.7).translate(-W/2, -H/2));
+  deselectNode();
+  activeFilters = new Set(Object.keys(FOCUS_COLORS));
+  activeTypes = new Set(Object.keys(REG_TYPE_COLORS));
+  searchQuery = '';
+  document.getElementById('searchInput').value = '';
+  document.querySelectorAll('.filter-chip').forEach(c => c.className = 'filter-chip active');
+  document.querySelectorAll('.type-item').forEach(i => i.classList.add('active'));
+  updateVisibility();
+}
+
+function fitView() {
+  const el = document.getElementById('graphArea');
+  const W = el.clientWidth, H = el.clientHeight;
+  svg.transition().duration(800)
+    .call(zoomBehavior.transform, d3.zoomIdentity.translate(W*0.05, H*0.05).scale(0.9));
+}
+
+function zoomIn() { svg.transition().duration(300).call(zoomBehavior.scaleBy, 1.4); }
+function zoomOut() { svg.transition().duration(300).call(zoomBehavior.scaleBy, 0.7); }
+
+// ─── REG PANEL (RIGHT SIDEBAR) ───────────────────────────────────────────────
+let regPanelQuery = '';
+
+function buildRegPanel(nodes) {
+  const list = document.getElementById('regList');
+  const countEl = document.getElementById('regCount');
+  list.innerHTML = '';
+  countEl.textContent = nodes.length;
+
+  if (!nodes.length) {
+    list.innerHTML = '<div class="no-results">No regulations found</div>';
+    return;
+  }
+
+  // Group by Regulation Type
+  const groups = {};
+  nodes.forEach(n => {
+    const type = n.regType || 'Other';
+    if (!groups[type]) groups[type] = [];
+    groups[type].push(n);
+  });
+
+  const sortedTypes = Object.keys(groups).sort();
+
+  sortedTypes.forEach(type => {
+    const groupNodes = groups[type];
+    const color = getRegTypeColor(type);
+
+    const groupLabel = document.createElement('div');
+    groupLabel.className = 'reg-group-label';
+    groupLabel.textContent = type;
+    list.appendChild(groupLabel);
+
+    groupNodes.forEach(n => {
+      const item = document.createElement('div');
+      item.className = 'reg-item' + (selectedNode && selectedNode.id === n.id ? ' active' : '');
+      item.dataset.id = n.id;
+      item.innerHTML = `
+        <div class="reg-item-label">${n.label}</div>
+        <div class="reg-item-badge" style="background:${color}20;color:${color};border:1px solid ${color}50">${n.regType || ''}</div>
+        <div class="reg-item-focus">${n.focus}</div>
+      `;
+      item.onclick = () => selectNode(n.id);
+      list.appendChild(item);
+    });
+  });
+}
+
+function filterRegPanel(query) {
+  regPanelQuery = query.toLowerCase().trim();
+  const filtered = allNodes.filter(n => {
+    if (!regPanelQuery) return true;
+    return n.label.toLowerCase().includes(regPanelQuery) ||
+           (n.regType || '').toLowerCase().includes(regPanelQuery) ||
+           (n.focus || '').toLowerCase().includes(regPanelQuery) ||
+           (n.category || '').toLowerCase().includes(regPanelQuery);
+  });
+  buildRegPanel(filtered);
+}
+
+function updateRegPanelHighlight(nodeId) {
+  document.querySelectorAll('.reg-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.id === nodeId);
+    if (item.dataset.id === nodeId) {
+      item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
+}
+
+
+window.addEventListener('load', () => {
+  buildFilters();
+  buildLegend();
+  initGraph();
+  buildNodeList(allNodes);
+  buildRegPanel(allNodes);
+});
+
+window.addEventListener('resize', () => {
+  const el = document.getElementById('graphArea');
+  const W = el.clientWidth, H = el.clientHeight;
+  if (simulation) {
+    simulation.force('center', d3.forceCenter(W/2, H/2)).alpha(0.1).restart();
+  }
+});
+</script>
+</body>
+</html>
